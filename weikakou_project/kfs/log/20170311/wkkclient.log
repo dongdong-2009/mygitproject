@@ -1,0 +1,179 @@
+VIDEO-2016-11-11 UNENCRY
+车牌 is 鲁AT8875  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>52</b><br />
+Array
+(
+    [time] => 2017-03-12 00:59:07
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AT8875
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2017-03-12/3701050905/0-57-48鲁AT8875.jpg
+)
+Array
+(
+    [time] => 2017-03-12 00:59:07
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AT8875
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2017-03-12/3701050905/0-57-48鲁AT8875.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 58c42c8c93b3942150924221
+        )
+
+)
+
+123 successs
+		[error]		[eroor 134524541]
+车牌 is 鲁A6169T  corlor is 1
+            [error]         [eroor 134524379]
+		[error]		[eroor 134524541]
+车牌 is 鲁A066DZ  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>52</b><br />
+Array
+(
+    [time] => 2017-03-12 06:52:58
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A066DZ
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2017-03-12/3701050905/6-51-37鲁A066DZ.jpg
+)
+Array
+(
+    [time] => 2017-03-12 06:52:58
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A066DZ
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2017-03-12/3701050905/6-51-37鲁A066DZ.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 58c47f7993b394ee37923f5c
+        )
+
+)
+
+123 successs
+		[error]		[eroor 134524541]
+车牌 is 鲁AE939E  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>52</b><br />
+Array
+(
+    [time] => 2017-03-12 07:48:59
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AE939E
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2017-03-12/3701050905/7-47-38鲁AE939E.jpg
+)
+Array
+(
+    [time] => 2017-03-12 07:48:59
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AE939E
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2017-03-12/3701050905/7-47-38鲁AE939E.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 58c48c9a93b394c750481664
+        )
+
+)
+
+123 successs
+		[error]		[eroor 134524541]
+车牌 is 鲁JTK219  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>52</b><br />
+Array
+(
+    [time] => 2017-03-12 08:01:22
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁JTK219
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2017-03-12/3701050905/8-00-01鲁JTK219.jpg
+)
+Array
+(
+    [time] => 2017-03-12 08:01:22
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁JTK219
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2017-03-12/3701050905/8-00-01鲁JTK219.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 58c48f8193b394c54d4816a4
+        )
+
+)
+
+123 successs
+		[error]		[eroor 134524541]
+车牌 is 鲁AYP038  corlor is 1
+            [error]         [eroor 134524379]
+		[error

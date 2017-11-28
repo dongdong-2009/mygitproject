@@ -1,0 +1,563 @@
+VIDEO-2016-11-11 UNENCRY
+车牌 is 鲁A8153T  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>50</b><br />
+Array
+(
+    [time] => 2016-12-13 07:50:06
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A8153T
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/7-48-07鲁A8153T.jpg
+)
+Array
+(
+    [time] => 2016-12-13 07:50:06
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A8153T
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/7-48-07鲁A8153T.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 584f373793b3941c0f5f90cd
+        )
+
+)
+
+123 successs
+
+211 successs
+车牌 is 鲁AZ512C  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>50</b><br />
+Array
+(
+    [time] => 2016-12-13 07:54:43
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AZ512C
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/7-52-44鲁AZ512C.jpg
+)
+Array
+(
+    [time] => 2016-12-13 07:54:43
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AZ512C
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/7-52-44鲁AZ512C.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 584f384c93b39438185f8cc2
+        )
+
+)
+
+123 successs
+
+211 successs
+车牌 is 鲁AHK275  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>50</b><br />
+Array
+(
+    [time] => 2016-12-13 08:05:27
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AHK275
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/8-03-28鲁AHK275.jpg
+)
+Array
+(
+    [time] => 2016-12-13 08:05:27
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AHK275
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/8-03-28鲁AHK275.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 584f3ad093b394ef0c5f911a
+        )
+
+)
+
+123 successs
+
+211 successs
+车牌 is 鲁A633M2  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>50</b><br />
+Array
+(
+    [time] => 2016-12-13 08:31:41
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A633M2
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/8-29-42鲁A633M2.jpg
+)
+Array
+(
+    [time] => 2016-12-13 08:31:41
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A633M2
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/8-29-42鲁A633M2.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 584f40f693b39438185f8dd2
+        )
+
+)
+
+123 successs
+
+211 successs
+车牌 is 鲁A675F5  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>50</b><br />
+Array
+(
+    [time] => 2016-12-13 08:51:14
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A675F5
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/8-49-15鲁A675F5.jpg
+)
+Array
+(
+    [time] => 2016-12-13 08:51:14
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A675F5
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/8-49-15鲁A675F5.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 584f458b93b394a6385f8cc1
+        )
+
+)
+
+123 successs
+
+211 successs
+车牌 is 浙CL395学  corlor is 2
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>50</b><br />
+Array
+(
+    [time] => 2016-12-13 08:54:54
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 浙CL395学
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/8-52-54浙CL395学.jpg
+)
+Array
+(
+    [time] => 2016-12-13 08:54:54
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 浙CL395学
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/8-52-54浙CL395学.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 584f466693b394eb0d5f8eb6
+        )
+
+)
+
+123 successs
+
+211 successs
+车牌 is 鲁A035A9  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>50</b><br />
+Array
+(
+    [time] => 2016-12-13 08:55:00
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A035A9
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/8-53-00鲁A035A9.jpg
+)
+Array
+(
+    [time] => 2016-12-13 08:55:00
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A035A9
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/8-53-00鲁A035A9.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 584f466c93b394cd3d5f8ca2
+        )
+
+)
+
+123 successs
+
+211 successs
+车牌 is 鲁AG775A  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>50</b><br />
+Array
+(
+    [time] => 2016-12-13 09:37:12
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AG775A
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/9-35-13鲁AG775A.jpg
+)
+Array
+(
+    [time] => 2016-12-13 09:37:12
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AG775A
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/9-35-13鲁AG775A.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 584f505193b39476405f8d5d
+        )
+
+)
+
+123 successs
+
+211 successs
+车牌 is 鲁AC6P05  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>50</b><br />
+Array
+(
+    [time] => 2016-12-13 10:24:49
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AC6P05
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/10-22-49鲁AC6P05.jpg
+)
+Array
+(
+    [time] => 2016-12-13 10:24:49
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AC6P05
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/10-22-49鲁AC6P05.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 584f5b7993b394c5625f8cec
+        )
+
+)
+
+123 successs
+
+211 successs
+车牌 is 鲁AT6966  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>50</b><br />
+Array
+(
+    [time] => 2016-12-13 11:08:59
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AT6966
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/11-07-00鲁AT6966.jpg
+)
+Array
+(
+    [time] => 2016-12-13 11:08:59
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AT6966
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/11-07-00鲁AT6966.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 584f65d493b3946e7a5f8cce
+        )
+
+)
+
+123 successs
+
+211 successs
+车牌 is 鲁A16966  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>50</b><br />
+Array
+(
+    [time] => 2016-12-13 11:09:07
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A16966
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/11-07-08鲁A16966.jpg
+)
+Array
+(
+    [time] => 2016-12-13 11:09:07
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A16966
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/11-07-08鲁A16966.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 584f65dc93b39438755f8ce8
+        )
+
+)
+
+123 successs
+
+211 successs
+车牌 is 鲁A196NG  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>50</b><br />
+Array
+(
+    [time] => 2016-12-13 11:18:44
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A196NG
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/11-16-44鲁A196NG.jpg
+)
+Array
+(
+    [time] => 2016-12-13 11:18:44
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A196NG
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/11-16-44鲁A196NG.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 584f681d93b3947b4e5f8e41
+        )
+
+)
+
+123 successs
+
+211 successs
+车牌 is 鲁A96N6F  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>50</b><br />
+Array
+(
+    [time] => 2016-12-13 11:19:00
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A96N6F
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13/3701050905/11-17-01鲁A96N6F.jpg
+)
+Array
+(
+    [time] => 2016-12-13 11:19:00
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A96N6F
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2016-12-13

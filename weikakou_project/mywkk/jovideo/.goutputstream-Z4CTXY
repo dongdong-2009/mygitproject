@@ -1,0 +1,393 @@
+﻿#include "jovideo.h"
+﻿#include "alg/Boon.h"
+#include "shmem.h"
+#include <stdlib.h>
+
+//待连接摄像头队列
+concurrent_queue<void *> camera_videos;
+
+//A通道视频队列
+concurrent_queue<void *> video_queue_a;
+//B通道视频队列
+concurrent_queue<void *> video_queue_b;
+
+//A通道视频队列
+concurrent_queue<void *> video_queue_aa;
+//B通道视频队列
+concurrent_queue<void *> video_queue_bb;
+
+JoveCameraVideo camera_video_a; //A通道视频解码
+JoveCameraVideo camera_video_b; //B通道视频解码
+
+JoveCameraVideo camera_video_aa; //A通道视频解码
+JoveCameraVideo camera_video_bb; //B通道视频解码
+
+//事件回调
+void event_callback(JCLink_t nLinkID, JCEventType etType, DWORD_PTR pData1,
+DWORD_PTR pData2, LPVOID pUserData)
+{
+	printf("event_callback:\t%d\t%d\n", nLinkID, etType);
+	if(etType == JCET_ConnectOK)			//连接成功
+	{
+		if (nLinkID==camera_video_a.link_id) {
+			log_output("[jovideo]A通道连接成功");
+		}
+        	if (nLinkID==camera_video_b.link_id) {
+			log_output("[jovideo]B通道连接成功");
+        	}
+	}
+	else if(etType == JCET_UserAccessError)	//密码错误
+	{
+		if (nLinkID==camera_video_a.link_id) {
+			log_output("[jovideo]A通道密码错误");
+		}
+        	if (nLinkID==camera_video_b.link_id) {
+			log_output("[jovideo]B通道密码错误");
+        	}
+	}
+	else if(etType==JCET_ConTimeout)	//连接超时
+	{
+		if (nLinkID==camera_video_a.link_id) {
+			log_output("[jovideo]A通道连接超时，重新连接");
+			camera_videos.push((void*)&camera_video_a);
+		}
+        	if (nLinkID==camera_video_b.link_id) {
+			log_output("[jovideo]B通道连接超时，重新连接");
+			camera_videos.push((void*)&camera_video_b);
+        	}
+	}
+	else if (etType==JCET_ConAbout)	//异常断开
+	{
+		if (nLinkID==camera_video_a.link_id) {
+			log_output("[jovideo]A通道异常断开，重新连接");
+			camera_videos.push((void*)&camera_video_a);
+		}
+        	if (nLinkID==camera_video_b.link_id) {
+			log_output("[jovideo]B通道异常断开，重新连接");
+			camera_videos.push((void*)&camera_video_b);
+        	}
+	}
+}
+//数据回调
+void data_callback(JCLink_t nLinkID, PJCStreamFrame pFrame, LPVOID pUserData)
+{
+	//printf("data_callback:\t%d\t%d\t%x\n", nLinkID, pFrame->nFrameSize, pFrame->pFrameData);
+    if (pFrame->sType != JCFT_Audio) {  //忽略掉音频数据
+	//printf("video\t%d\t%d\t%d\n", nLinkID, camera_video_a.link_id, camera_video_b.link_id);
+	PBMS pbms = (PBMS)malloc(sizeof(BMS));
+	pbms->size = pFrame->nFrameSize;
+	pbms->memory = (char*)malloc(pbms->size);
+	memcpy(pbms->memory, pFrame->pFrameData, pbms->size);
+
+	PBMS pbms1 = (PBMS)malloc(sizeof(BMS));
+	pbms1->size = pFrame->nFrameSize;
+	pbms1->memory = (char*)malloc(pbms->size);
+	memcpy(pbms1->memory, pFrame->pFrameData, pbms1->size);
+        if (nLinkID==camera_video_a.link_id) {
+		video_queue_a.push((void*)pbms); //A通道摄像头的回调数据流加入到对应的队列
+		video_queue_aa.push((void*)pbms1); //A通道摄像头的回调数据流加入到对应的队列
+		//printf("video_a\n");
+        }
+        if (nLinkID==camera_video_b.link_id) {
+		video_queue_b.push((void*)pbms); //B通道摄像头的回调数据流加入到对应的队列
+		video_queue_bb.push((void*)pbms1); //B通道摄像头的回调数据流加入到对应的队列
+		//printf("video_b\n");
+        }
+    }
+	else
+	{
+		//printf("audio\n");
+	}
+
+}
+//裸数据回调
+void raw_data_callback(JCLink_t nLinkID, PJCRawFrame pFrame, LPVOID pUserData)
+{
+	printf("raw_data_callback\n");
+}
+//设备搜索回调
+void search_callback(PJCLanDeviceInfo pDevice)
+{
+	printf("search_callback\n");
+}
+
+//线程：连接断线的相机
+void * thread_connect_camera(void* para)
+{
+    while(true)
+    {
+	void * p = NULL;
+        camera_videos.wait_and_pop(p);
+	 JoveCameraVideo *p_camera_video = (JoveCameraVideo*)p;
+        p_camera_video->connect();
+        usleep(200000);
+    }
+    return NULL;
+}
+
+//线程：A通道视频解码
+void * thread_video_a(void* para)
+{
+    while (true) {
+	void * p = NULL;
+        video_queue_a.wait_and_pop(p);
+	PBMS pFrame = (PBMS)p;
+//        printf("A decode\n");
+        unsigned char *buf = (unsigned char *)malloc(SM_BUF_SIZE);
+        camera_video_a.decoder->h264_2_rgb((unsigned char *)pFrame->memory,pFrame->size,buf,nullptr);
+        write_video_a((char *)buf);
+
+	if(pFrame->memory)
+		free(pFrame->memory);
+	if(pFrame)
+		free(pFrame);
+    if(buf)
+        free(buf);
+    }
+    return NULL;
+}
+
+//线程：A通道视频解码
+void * thread_video_aa(void* para)
+{
+
+	void *LibHandle = NULL;
+	
+	 video_create Video_create;
+  	video_init Video_init;
+  	video_process Video_process;
+ 	 video_get_result Video_get_result;
+
+	 LibHandle = dlopen("../lib/libalg_video.so", RTLD_LAZY);
+ 
+    	if(NULL == LibHandle)
+  	{
+    		 printf("LoadLibrary fail %s \n",dlerror());
+     		 return 0;
+  	}
+
+	 Video_create = (video_create)dlsym(LibHandle,"BoonAlgo_TRIP_Creat");
+	 if(NULL ==   Video_create)
+	  {
+		 printf("LCreate fail \n");
+	 	return 0;
+  	 }
+  	Video_init = (video_init)dlsym(LibHandle,"BoonAlgo_TRIP_Init");
+  	Video_process = (video_process)dlsym(LibHandle,"BoonAlgo_TRIP_Process");
+ 	Video_get_result = (video_get_result)dlsym(LibHandle,"BoonAlgo_TRIP_GetResults");
+  	IVS_TRIPMTER_S * trip;  
+  	trip = (IVS_TRIPMTER_S *)Video_create(0,NULL);
+
+   	Boon_ALG_TRIP_RULE_PARA_S para;
+   	para.iFps = 10;
+   	para.bDobDir = 0;
+   	para.iForDir = 0;
+   	para.iPointNum = 2;
+   	para.iSizeMax = 900;
+   	para.iSizeMin = 6;
+   	para.iTypeLimit = 1;
+    	para.astLinePts[0].x = 300;
+   	para.astLinePts[0].y = 200;
+   	para.astLinePts[1].x = 900;
+   	para.astLinePts[1].y = 200;
+
+  
+        Video_init(trip,&para,960,540);
+	
+
+    while (true) {
+	void * p = NULL;
+        video_queue_aa.wait_and_pop(p);
+	PBMS pFrame = (PBMS)p;
+//        printf("A decode\n");
+        unsigned char *buf = (unsigned char *)malloc(SM_BUF_SIZE);
+        camera_video_aa.decoder->h264_2_rgb((unsigned char *)pFrame->memory,pFrame->size,buf,nullptr);
+      //  write_video_a((char *)buf);
+	Boon_ALG_IMAGE3_S image;
+	image.iWidth = 960;
+   	image.iHeight = 540;  
+	 image.pucD1 = (char  *)malloc(image.iWidth * image.iHeight *3 );
+	memcpy(pucD1,(char *)buf,960*540*3);
+	Video_process(trip,&image1);
+	Boon_ALG_IVS_RESULT_SET_S result;   
+	int rtn = Video_get_result(trip,&result);	
+	if(rtn == 5)
+	{	
+		udp_sender1.send("{\"cmd\":\"snap_shot\",\"channel_id\":\"\",\"in_out\":\"入口\",\"flag\":\"once\"}");
+		log_output(
+				"[bvs->bcenter][get_ipc_config]{\"cmd\":\"snap_shot\",\"channel_id\":\"\",\"in_out\":\"入口\",\"flag\":\"once\"}");
+	}
+	free( image.pucD1);
+
+	if(pFrame->memory)
+		free(pFrame->memory);
+	if(pFrame)
+		free(pFrame);
+    if(buf)
+        free(buf);
+    }
+    return NULL;
+}
+
+//线程：B通道视频解码
+void * thread_video_b(void* para)
+{
+    while (true) {
+	void * p = NULL;
+        video_queue_b.wait_and_pop(p);
+	PBMS pFrame = (PBMS)p;
+//        printf("B decode\n");
+        unsigned char *buf = (unsigned char *)malloc(SM_BUF_SIZE);
+        camera_video_b.decoder->h264_2_rgb((unsigned char *)pFrame->memory,pFrame->size,buf,nullptr);
+        write_video_b((char *)buf);
+    if(pFrame->memory)
+		free(pFrame->memory);
+	if(pFrame)
+		free(pFrame);
+    if(buf)
+        free(buf);
+    }
+    return NULL;
+}
+//线程：B通道视频解码
+void * thread_video_bb(void* para)
+{
+	void *LibHandle = NULL;
+	
+	 video_create Video_create;
+  	video_init Video_init;
+  	video_process Video_process;
+ 	 video_get_result Video_get_result;
+
+	 LibHandle = dlopen("../lib/libalg_video.so", RTLD_LAZY);
+ 
+    	if(NULL == LibHandle)
+  	{
+    		 printf("LoadLibrary fail %s \n",dlerror());
+     		 return 0;
+  	}
+
+	 Video_create = (video_create)dlsym(LibHandle,"BoonAlgo_TRIP_Creat");
+	 if(NULL ==   Video_create)
+	  {
+		 printf("LCreate fail \n");
+	 	return 0;
+  	 }
+  	Video_init = (video_init)dlsym(LibHandle,"BoonAlgo_TRIP_Init");
+  	Video_process = (video_process)dlsym(LibHandle,"BoonAlgo_TRIP_Process");
+ 	Video_get_result = (video_get_result)dlsym(LibHandle,"BoonAlgo_TRIP_GetResults");
+  	IVS_TRIPMTER_S * trip;  
+  	trip = (IVS_TRIPMTER_S *)Video_create(0,NULL);
+
+   	Boon_ALG_TRIP_RULE_PARA_S para;
+   	para.iFps = 10;
+   	para.bDobDir = 0;
+   	para.iForDir = 0;
+   	para.iPointNum = 2;
+   	para.iSizeMax = 900;
+   	para.iSizeMin = 6;
+   	para.iTypeLimit = 1;
+    	para.astLinePts[0].x = 300;
+   	para.astLinePts[0].y = 200;
+   	para.astLinePts[1].x = 900;
+   	para.astLinePts[1].y = 200;
+
+  
+        Video_init(trip,&para,960,540);
+    while (true) {
+	void * p = NULL;
+        video_queue_bb.wait_and_pop(p);
+	PBMS pFrame = (PBMS)p;
+//        printf("B decode\n");
+        unsigned char *buf = (unsigned char *)malloc(SM_BUF_SIZE);
+        camera_video_bb.decoder->h264_2_rgb((unsigned char *)pFrame->memory,pFrame->size,buf,nullptr);
+     //   write_video_b((char *)buf);
+	Boon_ALG_IMAGE3_S image;
+	image.iWidth = 960;
+   	image.iHeight = 540;  
+	 image.pucD1 = (char  *)malloc(image.iWidth * image.iHeight *3 );
+	memcpy(image.pucD1,(char *)buf,960*540*3);
+	Video_process(trip,&image1);
+	Boon_ALG_IVS_RESULT_SET_S result;   
+	int rtn = Video_get_result(trip,&result);	
+	if(rtn == 5)
+	{
+	udp_sender1.send("{\"cmd\":\"snap_shot\",\"channel_id\":\"\",\"in_out\":\"出口\",\"flag\":\"once\"}");
+		log_output(
+				"[bvs->bcenter][get_ipc_config]{\"cmd\":\"snap_shot\",\"channel_id\":\"\",\"in_out\":\"出口\",\"flag\":\"once\"}");
+	}
+	free( image.pucD1);
+    if(pFrame->memory)
+		free(pFrame->memory);
+	if(pFrame)
+		free(pFrame);
+    if(buf)
+        free(buf);
+    }
+    return NULL;
+}
+
+//相机视频解码初始化
+void jovideo_start()
+{
+    //中维世纪SDK初始化
+    if(!JCSDK_InitSDK(9200))
+    {
+        return;
+    }
+    //设置回调函数
+    JCSDK_RegisterCallback(event_callback, data_callback, raw_data_callback, search_callback);
+    //分析g_machine里面的摄像头配置，生成待连接的摄像头队列
+    if (g_machine.channel_a_enable) {
+        camera_video_a.camera_ip = g_machine.channel_a.main_camera.device_ip_id;
+        camera_video_a.username = g_machine.channel_a.main_camera.device_username;
+        camera_video_a.password = g_machine.channel_a.main_camera.device_password;
+        camera_videos.push((void*)&camera_video_a);
+    }
+    if (g_machine.channel_b_enable) {
+        camera_video_b.camera_ip = g_machine.channel_b.main_camera.device_ip_id;
+        camera_video_b.username = g_machine.channel_b.main_camera.device_username;
+        camera_video_b.password = g_machine.channel_b.main_camera.device_password;
+        camera_videos.push((void*)&camera_video_b);
+    }
+	//连接摄像头线程
+    pthread_t tid_connect_camera;
+    pthread_attr_t attr_connect_camera;
+    pthread_attr_init(&attr_connect_camera);
+    pthread_create(&tid_connect_camera, &attr_connect_camera,
+                   thread_connect_camera, NULL);
+	//A通道视频解码发送线程
+    pthread_t tid_video_a;
+    pthread_attr_t attr_video_a;
+    pthread_attr_init(&attr_video_a);
+    pthread_create(&tid_video_a, &attr_video_a,
+                   thread_video_a, NULL);
+
+	//A通道视频解码发送线程
+    pthread_t tid_video_aa;
+    pthread_attr_t attr_video_aa;
+    pthread_attr_init(&attr_video_aa);
+    pthread_create(&tid_video_aa, &attr_video_aa,
+                   thread_video_aa, NULL);
+	//B通道视频解码发送线程
+    pthread_t tid_video_b;
+    pthread_attr_t attr_video_b;
+    pthread_attr_init(&attr_video_b);
+    pthread_create(&tid_video_b, &attr_video_b,
+                   thread_video_b, NULL);
+
+   //B通道视频解码发送线程
+    pthread_t tid_video_bb;
+    pthread_attr_t attr_video_bb;
+    pthread_attr_init(&attr_video_bb);
+    pthread_create(&tid_video_bb, &attr_video_bb,
+                   thread_video_bb, NULL);
+}
+
+//相机SDK连接设备
+bool JoveCameraVideo::connect()
+{
+    link_id = JCSDK_Connect((char*)camera_ip.c_str(), 9101, 1, (char*)username.c_str(), (char*)password.c_str(), 0, NULL);
+	printf("connect:\t%s\t%s\t%s\n", (char*)camera_ip.c_str(), (char*)username.c_str(), (char*)password.c_str());
+    return (link_id >= 0);
+}

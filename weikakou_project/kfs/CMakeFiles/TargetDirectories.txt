@@ -1,0 +1,8 @@
+/home/boon/kfs/CMakeFiles/edit_cache.dir
+/home/boon/kfs/CMakeFiles/rebuild_cache.dir
+/home/boon/kfs/algorithm/CMakeFiles/edit_cache.dir
+/home/boon/kfs/algorithm/CMakeFiles/rebuild_cache.dir
+/home/boon/kfs/algorithm/CMakeFiles/alg_video.dir
+/home/boon/kfs/mytest/CMakeFiles/edit_cache.dir
+/home/boon/kfs/mytest/CMakeFiles/rebuild_cache.dir
+/home/boon/kfs/mytest/CMakeFiles/mytest.dir

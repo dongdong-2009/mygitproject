@@ -1,0 +1,163 @@
+VIDEO-2016-11-11 UNENCRY
+车牌 is 鲁A8153T  corlor is 1
+            [error]         [eroor 134524379]
+		[error]		[eroor 134524541]
+车牌 is 鲁A81R2T  corlor is 1
+            [error]         [eroor 134524379]
+		[error]		[eroor 134524541]
+车牌 is 鲁AH2286  corlor is 1
+            [error]         [eroor 134524379]
+		[error]		[eroor 134524541]
+车牌 is 鲁A277SE  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>52</b><br />
+Array
+(
+    [time] => 2017-03-17 08:36:41
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A277SE
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2017-03-17/3701050905/8-34-56鲁A277SE.jpg
+)
+Array
+(
+    [time] => 2017-03-17 08:36:41
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A277SE
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2017-03-17/3701050905/8-34-56鲁A277SE.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 58cb2f3093b3948c44481640
+        )
+
+)
+
+123 successs
+		[error]		[eroor 134524541]
+车牌 is 鲁A21P56  corlor is 1
+            [error]         [eroor 134524379]
+		[error]		[eroor 134524541]
+车牌 is 鲁AL310X  corlor is 1
+            [error]         [eroor 134524379]
+		[error]		[eroor 134524541]
+车牌 is 鲁AM912Q  corlor is 1
+            [error]         [eroor 134524379]
+		[error]		[eroor 134524541]
+车牌 is 鲁LM9LL2  corlor is 2
+            [error]         [eroor 134524379]
+		[error]		[eroor 134524541]
+车牌 is 鲁A38358  corlor is 1
+            [error]         [eroor 134524379]
+		[error]		[eroor 134524541]
+车牌 is 鲁AXP278  corlor is 1
+            [error]         [eroor 134524379]
+		[error]		[eroor 134524541]
+车牌 is 鲁A806LG  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>52</b><br />
+Array
+(
+    [time] => 2017-03-17 12:04:58
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A806LG
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2017-03-17/3701050905/12-03-12鲁A806LG.jpg
+)
+Array
+(
+    [time] => 2017-03-17 12:04:58
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁A806LG
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2017-03-17/3701050905/12-03-12鲁A806LG.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 58cb600093b394dc364816d7
+        )
+
+)
+
+123 successs
+		[error]		[eroor 134524541]
+车牌 is 鲁AH2286  corlor is 1
+SZ<br />
+<b>Deprecated</b>:  Function MongoDB::authenticate() is deprecated in <b>/var/www/html/picUpload.php</b> on line <b>52</b><br />
+Array
+(
+    [time] => 2017-03-17 12:12:22
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AH2286
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2017-03-17/3701050905/12-10-36鲁AH2286.jpg
+)
+Array
+(
+    [time] => 2017-03-17 12:12:22
+    [dev] => 3701050905
+    [name] => 中安宾馆
+    [channel] => 
+    [vehicle] => Array
+        (
+            [plate] => 鲁AH2286
+            [color] => 
+            [brand] => 
+            [type] => 
+        )
+
+    [savepath] => qingbao/2017-03-17/3701050905/12-10-36鲁AH2286.jpg
+    [_id] => MongoId Object
+        (
+            [$id] => 58cb61bc93b3945f4648165e
+        )
+
+)
+
+123 successs
+		[error]		[eroor 134524541]
+车牌 is 鲁ALL963  corlor is 1
+            [error]         [eroor 134524379]
+		[error]		[eroor 134524541]
+车牌 is 鲁A16S55  corlor is 1
+            [error]         [eroor 134524379]
+	

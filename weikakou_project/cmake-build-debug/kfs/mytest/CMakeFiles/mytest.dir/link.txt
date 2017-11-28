@@ -1,0 +1,1 @@
+/usr/bin/c++   -O3  -fopenmp -mfpmath=sse -msse4.2 -march=x86-64 -D HAVE_CBLAS  -D HAVE_GSL -D HAVE_SSE2  -O3  -fopenmp -mfpmath=sse -msse4.2 -march=i386 -D HAVE_CBLAS  -D HAVE_GSL -D HAVE_SSE2  -g  -rdynamic CMakeFiles/mytest.dir/demo.cpp.o  -o ../bin/mytest -ldl -lm -lcurl -lopencv_highgui -lopencv_core -lopencv_imgproc 

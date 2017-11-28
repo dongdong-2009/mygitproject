@@ -1,0 +1,13 @@
+include_directories(
+    ${SOLUTION_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS})
+link_directories(${OpenCV_LIB_DIR})
+
+add_executable(mytest
+    Boon.h
+
+Boon_algo_type.h
+demo.cpp
+demo.h)
+
+target_link_libraries(mytest alg_video dl m   iconv ${OpenCV_LIBS} opencv_highgui opencv_core opencv_imgproc opencv_videoio opencv_imgcodecs)

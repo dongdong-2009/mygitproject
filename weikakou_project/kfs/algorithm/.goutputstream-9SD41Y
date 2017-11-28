@@ -1,0 +1,1820 @@
+
+
+#define		LOCAL_DBG_PRT_EN		//\BF\D8\D6Ƶ\F7\CA\D4\D0\C5Ϣ\B4\F2ӡʹ\C4ܣ\ACֻ\D7\F7\D3ñ\BEC\CEļ\FE
+#define		LOCAL_TIME_PRT_EN		//\BF\D8\D6\C6\D4\CB\D0\D0ʱ\BC\E4\B4\F2ӡʹ\C4ܣ\ACֻ\D7\F7\D3ñ\BEC\CEļ\FE\A3\ACLOCAL_DBG_PRT_ENҪ\CF\C8ʹ\C4\DC
+
+#include 	"Boon_algo.h"
+#include "ivs_gmm.h"
+
+#define ShowResult
+#ifdef ShowResult
+#include "opencv2/objdetect/objdetect.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/core/core.hpp"
+#include "opencv2/core/core_c.h"
+#endif
+#ifndef ONLY_GMM
+#include "ivs_ccl.h"
+#else
+#ifndef IVSMIN
+#define IVSMIN(a, b)	((a)<(b) ? (a) : (b))
+#endif
+
+#ifndef IVSMAX
+#define IVSMAX(a, b)	((a)>(b) ? (a) : (b))
+#endif
+#endif
+#include <sys/time.h>
+static   BoonInt32    iGmmSeg=0;
+static BoonInt32 auiAbsTab[Boon_ABS_REGION];
+BoonInt32     iGmmInitFlag = 0;
+
+#ifdef HAVE_TBB
+#include "tbb/tbb.h"
+using namespace tbb;
+
+class TBB_GMM_UpdateProcess
+{
+public:
+	void operator( )( const blocked_range<size_t>& stRange ) const 
+	{
+		const BoonFloat32 f32InitWeight  = (BoonFloat32)IVS_GMM_WEIGHT_INIT;
+		const BoonFloat32 f32InitSortKey = f32InitWeight * f32InitWeight / (IVS_GMM_SIGMA_INIT * IVS_GMM_SIGMA_INIT);
+		/*const BoonFloat32 f32InitVar = (BoonFloat32)(Boon_BGFG_MOG_SIGMA_INIT*Boon_BGFG_MOG_SIGMA_INIT);*/
+		const BoonFloat32 f32InitVar = f32VarMin * 0.7 + f32VarMax * 0.3;
+		
+		for( BoonInt32 y=stRange.begin(); y!=stRange.end( ); ++y )
+		{
+			/*Step 1\A3\BAָ\D5\EBƫ\D2ơ\A2\B1\E4\C1\BF\B3\F5ʼ\BB\AF*/
+			BoonUint8* pucFgTmp   = pucFgImg + y;
+			BoonUint8* pucBgTmp	= pucBgImg + y;
+			BoonUint8* pucDiffTmp = pucDiffImg + y;
+			BoonUint8* pucGrayTmp = pucCurrImg + y;
+			IVS_GMM_INFO_S* pstGmmPtr = pstGmmInfo + y;
+			
+			BoonBool  bMatched = BoonFalse;	
+			BoonInt32 iUpdataFlag = 1;			/*\CAǷ\F1\B8\FC\D0\C2ָʾ*/
+			BoonFloat32 f32WeightSum = 0;
+			BoonFloat32 f32Intensity = *(pucGrayTmp);
+			BoonFloat32 f32MatchedWeight = 0;
+
+			/*Step 2\A3\BA\C5ж\CF\CAǷ\F1ִ\D0\D0Ȩ\D6ظ\FC\D0\C2*/
+			if ((pstGmmPtr->iMvStartFrm>0  && pstGmmPtr->iMvConsistNum>0) ||
+				(pstGmmPtr->iStcStartFrm>0 && pstGmmPtr->iStcConsistNum<iStillTime))
+			{
+				iUpdataFlag = 0;					/*\B2\BB\B8\FC\D0\C2*/
+			}
+
+			/*Step 3\A3\BA\B2\CE\CA\FD\CF\FB\B3\FD*/
+			if (pstGmmPtr->iMvStartFrm>0  && iFrameNo>pstGmmPtr->iMvStartFrm+20 && 
+				(pstGmmPtr->iMvConsistNum < 0.8 * (iFrameNo - pstGmmPtr->iMvStartFrm) ||
+				iFrameNo > pstGmmPtr->iMvStartFrm + pstGmmPtr->iStcConsistNum + 36))
+			{
+				pstGmmPtr->iStcConsistNum = 0;
+				pstGmmPtr->iMvStartFrm = -1;
+			}
+
+			if (pstGmmPtr->iMvStartFrm>0 && (pstGmmPtr->iStcConsistNum>iStillTime+120 || 
+				pstGmmPtr->iStcConsistNum < 0.8 * (iFrameNo - pstGmmPtr->iStcStartFrm)))	/*ֱ\BDӱ\E4\B3ɱ\B3\BE\B0*/			
+			{
+				/*\C7\E5\BF\D5\CF\E0\B9ص\C4\CF\EE*/
+				pstGmmPtr->iStcConsistNum = 0;
+				pstGmmPtr->iStcStartFrm = -1;
+ 			}
+
+			/*Step 4\A3\BA\D3\EB\B8\F7Model\BD\F8\D0\D0ƥ\C5䣬Ѱ\D5\D2\C2\FA\D7\E3\CC\F5\BC\FE\B5\C4Model*/
+			BoonInt32 k = 0;
+			for (k=0; k<iModelNum; k++)
+			{
+				BoonInt32 iOrder = pstGmmPtr->aiOrder[k];
+				BoonFloat32 f32Weight = pstGmmPtr->af32Weight[iOrder];
+				f32WeightSum += f32Weight;
+				if (f32Weight < FLT_EPSILON)
+				{
+					break;
+				}
+				BoonFloat32 f32Mean = pstGmmPtr->af32Mean[iOrder];
+				BoonFloat32 f32Var  = pstGmmPtr->af32Variance[iOrder];
+				BoonFloat32 f32Dist = f32Intensity - f32Mean;
+				BoonFloat32 f32DistSquare = f32Dist * f32Dist;
+				
+				if( f32DistSquare < 3 * (f32Mean * 0.004 + 0.4) * f32VarRate * f32Var)
+				{
+					/*ƥ\C5䵽Model*/
+					f32WeightSum -= f32Weight;
+
+					if (iUpdataFlag)
+					{
+						pstGmmPtr->af32Weight[iOrder] += f32Alpha * (1.f - f32Weight);
+					}
+
+					if (pstGmmPtr->iGetBGTime)
+					{
+						pstGmmPtr->af32Mean[iOrder] += 0.2 * f32Dist;
+					}
+					else
+					{
+						pstGmmPtr->af32Mean[iOrder] += 5 * f32Alpha * f32Dist;
+					}
+				
+					f32Var = IVSMAX(f32Var + 2 * f32Alpha * (f32DistSquare - f32Var), f32VarMin);
+					if (f32Var >= f32VarMax)
+					{
+						f32Var = f32VarMax;
+					}
+
+					pstGmmPtr->af32Variance[iOrder] = f32Var;
+					pstGmmPtr->af32SortKey[iOrder]  = f32Weight * f32Weight / f32Var;
+					*(pucBgTmp) = pstGmmPtr->af32Mean[iOrder];
+					
+					/*\D6\D8\D0\C2\C5\C5\D0򣨽\F6\D3\EBǰ\C3\E6\B5ıȽϣ\A9*/
+					for(BoonInt32 m=k-1; m>=0; m--)
+					{
+						if (pstGmmPtr->af32SortKey[pstGmmPtr->aiOrder[m]] >= 
+							pstGmmPtr->af32SortKey[pstGmmPtr->aiOrder[m+1]])
+						{
+							break;
+						}
+
+						/*\BD\F6\BD\BB\BB\BB\D0\F2\BA\C5*/
+						BoonInt32 iTmpValue = pstGmmPtr->aiOrder[m];
+						pstGmmPtr->aiOrder[m]	= pstGmmPtr->aiOrder[m+1];
+						pstGmmPtr->aiOrder[m+1] = iTmpValue;
+					}
+
+					bMatched = BoonTrue;
+					f32MatchedWeight = f32Weight;
+					break;	/*ֻҪƥ\C5䵽\A3\AC\BC\B4\CC\F8\B3\F6ѭ\BB\B7k\A3\AC\B2\BB\D4ٽ\F8\D0\D0ƥ\C5\E4*/
+				}
+			}
+
+			/*\B8\F7Model\B8\FC\D0\C2*/
+			if( !bMatched && iUpdataFlag)	/*δƥ\C5䵽*/
+			{
+				bMatched = BoonTrue;
+				k = IVSMIN(k, iModelNum - 1);
+				BoonInt32 iOrder = pstGmmPtr->aiOrder[k];
+				f32WeightSum += f32InitWeight - pstGmmPtr->af32Weight[iOrder];
+				pstGmmPtr->af32Mean[iOrder]		= f32Intensity;
+				pstGmmPtr->af32Weight[iOrder]	= f32InitWeight;
+				pstGmmPtr->af32Variance[iOrder] = f32InitVar;
+				pstGmmPtr->af32SortKey[iOrder]	= f32InitSortKey;
+				pstGmmPtr->iMvStartFrm  = -1;
+				pstGmmPtr->iStcStartFrm = -1;
+			}
+			else
+			{
+				for( ; k<iModelNum; k++)
+				{
+					f32WeightSum += pstGmmPtr->af32Weight[k];
+				}
+			}
+
+			BoonFloat32 f32WeightScale = 1.f / f32WeightSum;
+			for(k=0; k<iModelNum; k++)
+			{
+				pstGmmPtr->af32Weight[pstGmmPtr->aiOrder[k]] *= f32WeightScale;
+				pstGmmPtr->af32SortKey[k] *= f32WeightScale * f32WeightScale;
+			}
+
+			/*ȷ\B6\A8ǰ\BE\B0\BAͱ\B3\BE\B0*/
+			if (f32MatchedWeight<0.3 && !pstGmmPtr->iGetBGTime)
+			{
+				*(pucFgTmp) = 255;	/*ǰ\BE\B0\B5\E3*/
+				*(pucBgTmp) = pstGmmPtr->af32Mean[pstGmmPtr->aiOrder[0]];
+			}
+			else
+			{
+				*(pucFgTmp) = 0;	/*\B1\B3\BE\B0\B5\E3*/
+			}
+
+			/*\B8\FC\D0\C2ʱ\BC\E4*/
+			if (pstGmmPtr->iGetBGTime > 0)
+			{
+				pstGmmPtr->iGetBGTime--;
+			}
+		}
+	}
+
+	TBB_GMM_UpdateProcess(IVS_GMM_TBB_PARA_S* pstTbbPara)
+	{
+		pucFgImg	= pstTbbPara->pucFgImg;
+		pucBgImg	= pstTbbPara->pucBgImg;
+		pucCurrImg	= pstTbbPara->pucCurrImg;
+		pucDiffImg	= pstTbbPara->pucDiffImg;
+		iHeight		= pstTbbPara->iHeight;
+		iWidth		= pstTbbPara->iWidth;
+		iStillTime	= pstTbbPara->iStillTime;
+		iFrameNo	= pstTbbPara->iFrameNo;
+		iModelNum	= pstTbbPara->iModelNum;
+		f32BgTh		= pstTbbPara->f32BgTh;
+		f32Alpha	= pstTbbPara->f32Alpha;
+		f32VarMin	= pstTbbPara->f32VarMin;
+		f32VarMax	= pstTbbPara->f32VarMax;
+		f32VarRate	= pstTbbPara->f32VarRate;
+		pstGmmInfo	= pstTbbPara->pstGmmInfo;
+	}
+private:
+	BoonUint8*	pucFgImg;
+	BoonUint8*	pucBgImg;
+	BoonUint8*	pucCurrImg;
+	BoonUint8*	pucDiffImg;
+	BoonInt32		iHeight;
+	BoonInt32		iWidth;
+	BoonInt32		iStillTime;
+	BoonInt32		iFrameNo;
+	BoonInt32		iModelNum;
+	BoonFloat32	f32BgTh;
+	BoonFloat32	f32Alpha;
+	BoonFloat32	f32VarMin;
+	BoonFloat32	f32VarMax;
+	BoonFloat32	f32VarRate;	
+	IVS_GMM_INFO_S* pstGmmInfo;
+};
+#endif	/*HAVE_TBB*/
+
+
+
+
+
+/***************************************************************************************
+
+\BA\AF\CA\FD\C3\FB\B3ƣ\BAIVS_GMM_Create
+
+\B9\A6\C4ܣ\BA\B4\B4\BD\A8\CB㷨\D2\FD\C7\E6
+
+\B2\CE\CA\FD\A3\BA	Seg	\CB㷨\C4ڲ\BF\B6\AF̬\C9\EA\C7\EB\C4ڴ\E6\B5Ķε\D8ַ
+Key \B4\B4\BD\A8\D2\FD\C7\E6\CB\F9\D0\E8\B5\C4\C3\DCԿ
+
+\B7\B5\BB\D8ֵ\A3\BA\B4\B4\BD\A8\B3ɹ\A6\B7\B5\BB\D8\D2\FD\C7\E6ָ\D5\EB
+\B4\B4\BD\A8ʧ\B0ܷ\B5\BBؿ\D5ָ\D5\EB
+
+\C6\E4\CB\FB\A3\BA
+
+***************************************************************************************/
+Boon_HANDLE  IVS_GMM_Create(BoonInt32  _iSeg,BoonChar * _pcKey)
+{
+	GMM_Handle   Handle;
+	iGmmSeg = _iSeg;
+	Handle=(GMM_Handle )Public_Calloc(iGmmSeg,sizeof(IVS_GMM_S),8);            //\B9켣\B8\FA\D7\D9
+	if(Handle==NULL)
+	{
+		BoonAlgo_LOG_AddLog( NULL, LOG_COM_BASIC,"IVS_GMM_Create: Memory too small.\n");
+		return  NULL;
+	}
+	else
+	{
+		return Handle;
+	}
+}
+
+/**********************************************************
+	\C3\FB\B3ƣ\BA	IVS_GMM_Init
+
+	\B9\A6\C4ܣ\BA	\BB\EC\B8\DF˹\B1\B3\BE\B0\BD\A8ģ\A1\AA\A1\AA\B3\F5ʼ\BB\AF
+
+	\B2\CE\CA\FD\A3\BA	Boon_HANDLE           _hModule		GMMģ\BF\E9ָ\D5\EB
+			BoonInt32				_iFrmInterval	\CC\F8֡֡\CA\FD
+			BoonInt32				_iImgWidth		ͼ\CF\F1\BF\ED\B6\C8
+			BoonInt32				_iImgHeight		ͼ\CF\F1\B8߶\C8
+
+	\B7\B5\BBأ\BA	IVS_STATUS_E		Boon_ALG_OK/Boon_ALG_FAIL
+**********************************************************/
+IVS_STATUS_E IVS_GMM_Init(Boon_HANDLE _hModule,BoonInt32 _iFrmInterval, BoonInt32 _iImgWidth, BoonInt32 _iImgHeight)
+{
+	GMM_Handle   Handle;
+	BoonInt32 i = 0;
+	BoonInt32 j = 0;
+	BoonInt32 iMemAlign  = 4;
+	BoonInt32 iPixelSize = (_iImgWidth) * _iImgHeight;
+	if (NULL == _hModule)
+	{
+		return Boon_ALG_FAIL;
+	}
+	Handle =(GMM_Handle)_hModule;
+	//memset(_pstGmm, 0, sizeof(IVS_GMM_S));
+
+	Handle->iFrameNo   = 0;
+	Handle->iFgBigNum  = 0;
+	Handle->iHistory   = IVS_GMM_WINDOW_SIZE;
+	Handle->f32BgRatio = IVS_GMM_BACKGROUND_THRESHOLD;
+	Handle->iMixtures  = IVS_GMM_NGAUSSIANS;
+	Handle->f32VarTh   = IVS_GMM_SBoon_THRESHOLD * IVS_GMM_SBoon_THRESHOLD;
+	Handle->f32InitWeight  = (BoonFloat32)IVS_GMM_WEIGHT_INIT;
+	Handle->f32InitSortKey = Handle->f32InitWeight * Handle->f32InitWeight /
+							  (IVS_GMM_SIGMA_INIT * IVS_GMM_SIGMA_INIT);
+	Handle->iImgWidth = _iImgWidth;
+	Handle->iImgHeight = _iImgHeight;
+   if(_iImgWidth * _iImgHeight <=0)
+   {
+	return Boon_ALG_FAIL;
+   }
+	Handle->pstGmmInfo = (IVS_GMM_INFO_S*)Public_Calloc(iGmmSeg, sizeof(IVS_GMM_INFO_S) * iPixelSize, iMemAlign);
+	if (NULL == Handle->pstGmmInfo)
+	{
+		return Boon_ALG_FAIL;
+	}
+
+	/*\B3\F5ʼ\BB\AF\B8\DF˹ģ\D0\CD(\B8\F7\CF\F1\CBص\E3)*/
+	for (i=0; i <iPixelSize; i++)
+	{
+		IVS_GMM_INFO_S* pstPixelInfo = Handle->pstGmmInfo + i;
+		pstPixelInfo->iMvStartFrm	= -1;
+		pstPixelInfo->iGetBGTime	= IVS_GMM_MAX_BACKLEAN;
+		pstPixelInfo->iMvConsistNum = 0;
+		pstPixelInfo->iStcStartFrm	= -1;
+		pstPixelInfo->iStcConsistNum = 0;
+		for (j = 0; j < IVS_GMM_NGAUSSIANS; j++)
+		{
+			pstPixelInfo->aiOrder[j] = j;
+			pstPixelInfo->af32Mean[j] = 0;
+			pstPixelInfo->af32Weight[j] = 0;
+			pstPixelInfo->af32SortKey[j] = 0;
+			pstPixelInfo->af32Variance[j] = 0;
+		}
+	}
+
+	/*\B3\F5ʼ\BB\AF\CF\E0\B9\D8ͼ\CF\F1\D0\C5Ϣ*/
+	Handle->f32VarCorrectRate = 1;
+	Handle->f32GrayAve	= 120;
+	Handle->pstImgBuff = (IVS_GMM_IMGBuff_S*)Public_Calloc(iGmmSeg, sizeof(IVS_GMM_IMGBuff_S), iMemAlign);
+	memset(Handle->pstImgBuff, 0, sizeof(IVS_GMM_IMGBuff_S));
+
+	Handle->pstImgBuff->pucSmoothImg = (BoonUint8*)Public_Calloc(iGmmSeg, iPixelSize, iMemAlign);
+	if (NULL == Handle->pstImgBuff->pucSmoothImg)
+	{
+		return Boon_ALG_FAIL;
+	}
+	Handle->pstImgBuff->pucSnImg = (BoonUint8*)Public_Calloc(iGmmSeg, iPixelSize, iMemAlign);
+	if (NULL == Handle->pstImgBuff->pucSnImg)
+	{
+		return Boon_ALG_FAIL;
+	}
+	Handle->pstImgBuff->pucFgImg = (BoonUint8*)Public_Calloc(iGmmSeg, iPixelSize, iMemAlign);
+	if (NULL == Handle->pstImgBuff->pucFgImg)
+	{
+		return Boon_ALG_FAIL;
+	}
+	Handle->pstImgBuff->pucBgImg = (BoonUint8*)Public_Calloc(iGmmSeg, iPixelSize, iMemAlign);
+	if (NULL == Handle->pstImgBuff->pucBgImg)
+	{
+		return Boon_ALG_FAIL;
+	}
+	Handle->pstImgBuff->pucPrevImg = (BoonUint8*)Public_Calloc(iGmmSeg, iPixelSize, iMemAlign);
+	if (NULL == Handle->pstImgBuff->pucPrevImg)
+	{
+		return Boon_ALG_FAIL;
+	}
+	Handle->pstImgBuff->pucDiffImg = (BoonUint8*)Public_Calloc(iGmmSeg, iPixelSize, iMemAlign);
+	if (NULL == Handle->pstImgBuff->pucDiffImg)
+	{
+		return Boon_ALG_FAIL;
+	}
+	Handle->pstImgBuff->pucBoundaryImg = (BoonUint8*)Public_Calloc(iGmmSeg, iPixelSize, iMemAlign);
+	if (NULL == Handle->pstImgBuff->pucBoundaryImg)
+	{
+		return Boon_ALG_FAIL;
+	}
+
+	/*\C5\E4\D6ø߼\B6\B2\CE\CA\FD*/
+	if (0/*_pstParaURP->stAdvancePara.iAdvanceParaEnable*/)
+	{
+		/*Boon_ALG_ADVANCE_PARA_S* pstAdvPara = &(_pstParaURP->stAdvancePara);
+		_pstGmm->stGmmPara.iVarMin		  = pstAdvPara->iBGForbackDiffMin;
+		_pstGmm->stGmmPara.iVarMax		  = pstAdvPara->iBGForbackDiffMax;
+		_pstGmm->stGmmPara.iTarMinArea	  = pstAdvPara->iTargetAreaMIn;				
+		_pstGmm->stGmmPara.iTarMaxArea	  = pstAdvPara->iTargetAreaMax;
+		_pstGmm->stGmmPara.iTarMergeRate  = pstAdvPara->iTargetRergRate;
+		_pstGmm->stGmmPara.iTarMaxFrame	  = pstAdvPara->iRealTargetTime / _iFrmInterval;
+		_pstGmm->stGmmPara.iStilltoBgTime = pstAdvPara->iBGUpdatatime * 25 / _iFrmInterval;
+		_pstGmm->stGmmPara.iWindowsSize	  = (11 - pstAdvPara->iBGUpdataSpeed) * 35 / _iFrmInterval;*/
+	}
+	else
+	{
+		Handle->stGmmPara.f32VarMin = 16;	/*\B7\BD\B2\EE\C3\C5\CF޵\C4ƽ\B7\BD*/
+		Handle->stGmmPara.f32VarMax = 36;
+		Handle->stGmmPara.iTgtMinArea	 = 3000;				
+		Handle->stGmmPara.iTgtMaxArea	 = 80000;
+		Handle->stGmmPara.iTgtMergeRate = 5;
+		Handle->stGmmPara.iTgtMaxFrame  = 16 / _iFrmInterval;
+		Handle->stGmmPara.iStilltoBgTime = 80;
+		Handle->stGmmPara.iWindowsSize   = IVS_GMM_WINDOW_SIZE / _iFrmInterval;
+	}
+	Handle->f32InitVar = Handle->stGmmPara.f32VarMin * 0.7f + Handle->stGmmPara.f32VarMax * 0.3f;
+
+	/*\C5\E4\D6\C3TBBʹ\D3ò\CE\CA\FD\A3\A8\D5\E2\C0\EFֻ\CAǲ\BB\B7\A2\C9\FA\B1仯\B5Ĳ\CE\CA\FD\A3\A9*/
+#ifdef HAVE_TBB
+	/*Handle->pstTbbPara = (IVS_GMM_TBB_PARA_S*)(Handle->pstImgBuff->pucSmoothImg + iPixelSize);*/
+	Handle->pstTbbPara = (IVS_GMM_TBB_PARA_S*)Public_Calloc(iGmmSeg, sizeof(IVS_GMM_TBB_PARA_S), iMemAlign);
+	if (NULL == Handle->pstTbbPara)
+	{
+		return Boon_ALG_FAIL;
+	}
+	memset(Handle->pstTbbPara, 0, sizeof(IVS_GMM_TBB_PARA_S));
+	Handle->pstTbbPara->pucFgImg	= Handle->pstImgBuff->pucFgImg;
+	Handle->pstTbbPara->pucBgImg	= Handle->pstImgBuff->pucBgImg;
+	Handle->pstTbbPara->pucDiffImg	= Handle->pstImgBuff->pucDiffImg;
+	Handle->pstTbbPara->iHeight	= _iImgHeight;
+	Handle->pstTbbPara->iWidth		= _iImgWidth;
+	Handle->pstTbbPara->pstGmmInfo	= Handle->pstGmmInfo;
+	Handle->pstTbbPara->iStillTime	= Handle->stGmmPara.iStilltoBgTime;
+	Handle->pstTbbPara->iFrameNo	= Handle->iFrameNo;
+	Handle->pstTbbPara->iModelNum	= Handle->iMixtures;
+	Handle->pstTbbPara->f32BgTh	= Handle->f32BgRatio;
+	Handle->pstTbbPara->f32Alpha	= (BoonFloat32)1.0/Handle->stGmmPara.iWindowsSize;
+	Handle->pstTbbPara->f32VarMin	= Handle->stGmmPara.f32VarMin;
+	Handle->pstTbbPara->f32VarMax	= Handle->stGmmPara.f32VarMax;
+#endif
+
+	/*\C9\FA\B3ɾ\F8\B6\D4ֵ\B1\ED*/
+	j = Boon_ABS_ZEROPOS;
+	for (i=0; i<j; i++)
+	{
+		auiAbsTab[j + i] = i;
+		auiAbsTab[j - i] = i;
+	}
+
+	iGmmInitFlag = 0;
+
+	return Boon_ALG_OK;
+}
+
+/**********************************************************
+	\C3\FB\B3ƣ\BA	GMM_Expansion3x3
+
+	\B9\A6\C4ܣ\BA	ͼ\CF\F1\C5\F2\D5\CD
+
+	\B2\CE\CA\FD\A3\BA	BoonUint8*			_pucSrc			ԭʼͼ\CF\F1
+	  		BoonUint8*			_pucDst			\C5\F2\D5ͽ\E1\B9\FB
+			BoonInt32				_iWidth			ͼ\CF\F1\BF\ED\B6\C8			
+			BoonInt32				_iHeight		ͼ\CF\F1\B8߶\C8
+
+	\B7\B5\BBأ\BA	NULL
+**********************************************************/
+BoonVoid GMM_Expansion3x3(BoonUint8* _pucSrc, BoonUint8* _pucDst, BoonInt32 _iWidth, BoonInt32 _iHeight)
+{
+	BoonInt32 i = 0;
+	BoonInt32 j = 0;
+	BoonInt32 iHeight = _iHeight - 1;
+	BoonUint8* pucSrcTmp  = _pucSrc + _iWidth;
+	BoonUint8* pucDstPrev = _pucDst;
+	BoonUint8* pucDstCurr = _pucDst + _iWidth;
+	BoonUint8* pucDstNext = pucDstCurr + _iWidth;
+	memset(_pucDst, 0, _iHeight * _iWidth);/*\BD\ABĿ\B1\EAͼ\CF\F1\C7\E5\C1\E3*/
+	for (i=1; i<iHeight - 1; i++)
+	{
+		BoonInt32 iLeft  = 0;
+		BoonInt32 iRight = 2;
+		for (j=1; iRight<_iWidth - 1; j++, iLeft++, iRight++)
+		{
+			if (pucSrcTmp[j])
+			{
+			  	
+				pucDstPrev[j] = 255;
+				pucDstCurr[j] = 255;
+				pucDstNext[j] = 255;
+				pucDstPrev[iLeft] = 255;
+				pucDstCurr[iLeft] = 255;
+				pucDstNext[iLeft] = 255;
+				pucDstPrev[iRight] = 255;
+				pucDstCurr[iRight] = 255;
+				pucDstNext[iRight] = 255;
+				
+			
+			}
+			else
+			{
+				
+			}
+		}
+		pucSrcTmp  += _iWidth;
+		pucDstPrev += _iWidth;
+		pucDstCurr += _iWidth;
+		pucDstNext += _iWidth;
+	}
+
+
+}
+BoonVoid GMM_com(BoonUint8* _pucSrc, BoonUint8* _pucDst, BoonInt32 _iWidth, BoonInt32 _iHeight)
+{
+	BoonInt32 i = 0;
+	BoonInt32 j = 0;
+
+	for (i=1; i<iHeight - 1; i++)
+	{
+		
+		for (j=1; iRight<_iWidth - 1; j++, iLeft++, iRight++)
+		{
+			if (pucSrcTmp[j])
+			{
+			  	
+			}
+		
+		}
+		
+	}
+
+
+}
+
+
+/**********************************************************
+	\C3\FB\B3ƣ\BA	GMM_Expansion7x7
+
+	\B9\A6\C4ܣ\BA	ͼ\CF\F1\C5\F2\D5\CD
+
+	\B2\CE\CA\FD\A3\BA	BoonUint8*			_pucSrc			ԭʼͼ\CF\F1
+	  		BoonUint8*			_pucDst			\C5\F2\D5ͽ\E1\B9\FB
+			BoonInt32				_iWidth			ͼ\CF\F1\BF\ED\B6\C8			
+			BoonInt32				_iHeight		ͼ\CF\F1\B8߶\C8
+
+	\B7\B5\BBأ\BA	NULL
+**********************************************************/
+BoonVoid GMM_Expansion7x7(BoonUint8* _pucSrc, BoonUint8* _pucDst, BoonInt32 _iWidth, BoonInt32 _iHeight)
+{
+	BoonInt32 i = 0;
+	BoonInt32 j = 0;
+	BoonInt32 iHeight = _iHeight - 3;
+	BoonUint8* pucSrcTmp  = _pucSrc + _iWidth;
+	BoonUint8* pucDstPrev3 = _pucDst;
+	BoonUint8* pucDstPrev2 = pucDstPrev3 + _iWidth;
+	BoonUint8* pucDstPrev1 = pucDstPrev2 + _iWidth;
+	BoonUint8* pucDstCurr  = pucDstPrev1 + _iWidth;
+	BoonUint8* pucDstNext1 = pucDstCurr + _iWidth;
+	BoonUint8* pucDstNext2 = pucDstNext1 + _iWidth;
+	BoonUint8* pucDstNext3 = pucDstNext2 + _iWidth;
+	memset(_pucDst, 0, _iHeight * _iWidth);/*\BD\ABĿ\B1\EAͼ\CF\F1\C7\E5\C1\E3*/
+	for (i=3; i<iHeight; i++)
+	{
+		BoonInt32 iLeft3  = 0;
+		BoonInt32 iLeft2  = 1;
+		BoonInt32 iLeft1  = 2;
+		BoonInt32 iRight1 = 4;
+		BoonInt32 iRight2 = 5;
+		BoonInt32 iRight3 = 6;
+		for (j=3; iRight3<_iWidth; j++, iLeft1++, iLeft2++, iLeft3++, iRight1++, iRight2++, iRight3++)
+		{
+			if (pucSrcTmp[j])
+			{
+				pucDstPrev3[iLeft3] = 255;
+				pucDstPrev2[iLeft3] = 255;
+				pucDstPrev1[iLeft3] = 255;
+				pucDstCurr[iLeft3]  = 255;
+				pucDstNext1[iLeft3] = 255;
+				pucDstNext2[iLeft3] = 255;
+				pucDstNext3[iLeft3] = 255;
+
+				pucDstPrev3[iLeft2] = 255;
+				pucDstPrev2[iLeft2] = 255;
+				pucDstPrev1[iLeft2] = 255;
+				pucDstCurr[iLeft2]  = 255;
+				pucDstNext1[iLeft2] = 255;
+				pucDstNext2[iLeft2] = 255;
+				pucDstNext3[iLeft2] = 255;
+
+				pucDstPrev3[iLeft1] = 255;
+				pucDstPrev2[iLeft1] = 255;
+				pucDstPrev1[iLeft1] = 255;
+				pucDstCurr[iLeft1]  = 255;
+				pucDstNext1[iLeft1] = 255;
+				pucDstNext2[iLeft1] = 255;
+				pucDstNext3[iLeft1] = 255;
+
+				pucDstPrev3[j] = 255;
+				pucDstPrev2[j] = 255;
+				pucDstPrev1[j] = 255;
+				pucDstCurr[j]  = 255;
+				pucDstNext1[j] = 255;
+				pucDstNext2[j] = 255;
+				pucDstNext3[j] = 255;
+
+				pucDstPrev3[iRight1] = 255;
+				pucDstPrev2[iRight1] = 255;
+				pucDstPrev1[iRight1] = 255;
+				pucDstCurr[iRight1]  = 255;
+				pucDstNext1[iRight1] = 255;
+				pucDstNext2[iRight1] = 255;
+				pucDstNext3[iRight1] = 255;
+
+				pucDstPrev3[iRight2] = 255;
+				pucDstPrev2[iRight2] = 255;
+				pucDstPrev1[iRight2] = 255;
+				pucDstCurr[iRight2]  = 255;
+				pucDstNext1[iRight2] = 255;
+				pucDstNext2[iRight2] = 255;
+				pucDstNext3[iRight2] = 255;
+
+				pucDstPrev3[iRight3] = 255;
+				pucDstPrev2[iRight3] = 255;
+				pucDstPrev1[iRight3] = 255;
+				pucDstCurr[iRight3]  = 255;
+				pucDstNext1[iRight3] = 255;
+				pucDstNext2[iRight3] = 255;
+				pucDstNext3[iRight3] = 255;
+
+			}
+		}
+		pucSrcTmp   += _iWidth;
+		pucDstPrev3 += _iWidth;
+		pucDstPrev2 += _iWidth;
+		pucDstPrev1 += _iWidth;
+		pucDstCurr  += _iWidth;
+		pucDstNext1 += _iWidth;
+		pucDstNext2 += _iWidth;
+		pucDstNext3 += _iWidth;
+	}
+}
+
+
+/**********************************************************
+	\C3\FB\B3ƣ\BA	GMM_GaussSmooth
+
+	\B9\A6\C4ܣ\BA	ͼ\CF\F1\B8\DF˹\C2˲\A83x3
+
+	\B2\CE\CA\FD\A3\BA	BoonUint8*			_pucSrc			ԭʼͼ\CF\F1
+	  		BoonUint8*			_pucDst			\C5\F2\D5ͽ\E1\B9\FB
+			BoonInt32				_iWidth			ͼ\CF\F1\BF\ED\B6\C8			
+			BoonInt32				_iHeight		ͼ\CF\F1\B8߶\C8
+
+	\B7\B5\BBأ\BA	NULL
+**********************************************************/
+BoonVoid GMM_GaussSmooth(BoonUint8* _pucSrc, BoonUint8* _pucDst, BoonInt32 _iWidth, BoonInt32 _iHeight)
+{
+	BoonInt32 i = 0;
+	BoonInt32 j = 0;
+	BoonInt32 iHeight = _iHeight - 1;
+	BoonUint8* pucDstTmp  = _pucDst + _iWidth;
+	BoonUint8* pucSrcPrev = _pucSrc;
+	BoonUint8* pucSrcCurr = _pucSrc + _iWidth;
+	BoonUint8* pucSrcNext = pucSrcCurr + _iWidth;	
+	memset(_pucDst, 0, _iHeight * _iWidth);	/*\BD\ABĿ\B1\EAͼ\CF\F1\C7\E5\C1\E3*/
+
+	/*-----------------------3x3
+	*			1	2	1
+	*	1/16 *	2	4	2
+	*			1	2	1
+	-----------------------*/	
+	for (i=1; i<iHeight; i++)
+	{
+		BoonInt32 iLeft  = 0;
+		BoonInt32 iRight = 2;
+		for (j=1; iRight<_iWidth; j++, iLeft++, iRight++)
+		{
+			pucDstTmp[j] = ((pucSrcCurr[j]<<2) +
+							((pucSrcPrev[j] + pucSrcCurr[iLeft] + pucSrcCurr[iRight] + pucSrcNext[j])<<1)+
+							(pucSrcPrev[iLeft] + pucSrcPrev[iRight] + pucSrcNext[iLeft] + pucSrcNext[iRight]))>>4;
+		}
+		pucDstTmp  += _iWidth;
+		pucSrcPrev += _iWidth;
+		pucSrcCurr += _iWidth;
+		pucSrcNext += _iWidth;
+	}
+}
+
+/**********************************************************
+	\C3\FB\B3ƣ\BA	GMM_RectMerge
+
+	\B9\A6\C4ܣ\BA	\BB\EC\B8\DF˹\B1\B3\BE\B0\BD\A8ģ\A1\AA\A1\AAĿ\B1\EA\BAϲ\A2
+
+	\B2\CE\CA\FD\A3\BA	BoonUint8*			_pucSnImg		ԭʼͼ\CF\F1
+	  		IVS_TRACK_RECT_S*	_pstRect		\C5\F2\D5ͽ\E1\B9\FB
+			BoonInt32*			_iCurrRectNum	Ŀ\B1\EA\B8\F6\CA\FD
+			BoonInt32				_MergeRate		\BAϲ\A2\B1\C8\C0\FD
+			BoonInt32				_iWidth			ͼ\CF\F1\BF\ED\B6\C8
+
+	\B7\B5\BBأ\BA	BoonInt32				iRectNum		\BAϲ\A2\BA\F3\B5\C4Ŀ\B1\EA\CA\FD
+**********************************************************/
+#ifndef ONLY_GMM
+BoonInt32 GMM_RectMerge(BoonUint8* _pucSnImg, IVS_TRACK_RECT_S* _pstRect,
+					 BoonInt32 _iCurrRectNum, BoonInt32 _MergeRate, BoonInt32 _iWidth)
+{
+	BoonInt32 i = 0;
+	BoonInt32 j = 0;
+	BoonInt32 m = 0;
+	BoonInt32 n = 0;
+	BoonInt32* piAbsTab = auiAbsTab + Boon_ABS_ZEROPOS;
+	BoonInt32 iRectNum  = _iCurrRectNum;
+
+	for (i=0; i<iRectNum; i++)
+	{		
+		for (j=i+1; j<iRectNum; j++)
+		{
+			/*\BC\C6\CB\E3\BAϲ\A2\B5\C4\C7\E9\BF\F6*/
+			BoonUint8* pucSn = NULL;
+			BoonInt32 iDistCx = _pstRect[i].iCenterX - _pstRect[j].iCenterX;
+			BoonInt32 iDistCy = _pstRect[i].iCenterY - _pstRect[j].iCenterY;
+			BoonInt32 iRateX = piAbsTab[iDistCx] * 200 / (_pstRect[i].right + _pstRect[j].right - (_pstRect[i].left + _pstRect[j].left) + 2);
+			BoonInt32 iRateY = piAbsTab[iDistCy] * 200 / (_pstRect[i].bottom + _pstRect[j].bottom - (_pstRect[i].top + _pstRect[j].top) + 2);
+
+			/*\BC\C6\CB\E3ǰ\BE\B0ռ\BFձȵı仯\A3\AC\BD\AB\B1仯̫\B4\F3\BB\F2\D5ߵ\CD\D3\DAĳ\B8\F6ֵ\B5ĺϲ\A2\A1\AA\A1\AA\D5\E2\C0ﲻ\C3\F7\B0\D7*/
+			BoonInt32 iTopNew	= IVSMIN(_pstRect[i].top, _pstRect[j].top);
+			BoonInt32 iLeftNew = IVSMIN(_pstRect[i].left, _pstRect[j].left);
+			BoonInt32 iRightNew = IVSMAX(_pstRect[i].right, _pstRect[j].right);
+			BoonInt32 iBottomNew = IVSMAX(_pstRect[i].bottom, _pstRect[j].bottom);			
+			BoonInt32 iAreaNew = (iRightNew - iLeftNew + 1) * (iBottomNew - iTopNew + 1);
+			BoonInt32 iAreai = (_pstRect[i].right - _pstRect[i].left + 1) * (_pstRect[i].bottom - _pstRect[i].top + 1);
+			BoonInt32 iAreaj = (_pstRect[j].right - _pstRect[j].left + 1) * (_pstRect[j].bottom - _pstRect[j].top + 1);
+			BoonInt32 iAddRatei = 0;	
+			BoonInt32 iAddRatej = 0;
+			if (iAreaNew > iAreai)
+			{
+				iAddRatei = (_pstRect[i].iAreaNum * 100)/(iAreaNew - iAreai);
+			}
+			else
+			{
+				iAddRatei = 50;
+			}
+			
+			if(iAreaNew > iAreaj)
+			{
+				iAddRatej = (_pstRect[j].iAreaNum * 100)/(iAreaNew - iAreaj);
+			}
+			else
+			{
+				iAddRatej = 50;
+			}
+
+			/*\BAϲ\A2\B8\FC\D0\C2*/
+			if(iRateX+iRateY<_MergeRate && iAddRatei>8 && iAddRatej>8 && 
+				_pstRect[i].iDiffRate>5 && _pstRect[j].iDiffRate>5 && 
+				piAbsTab[_pstRect[i].iDiffRate-_pstRect[j].iDiffRate]<15)
+			{
+				_pstRect[i].left   = iLeftNew;
+				_pstRect[i].right  = iRightNew;
+				_pstRect[i].top	   = iTopNew;
+				_pstRect[i].bottom = iBottomNew;
+
+				_pstRect[i].iCenterX = (_pstRect[i].iCenterX * _pstRect[i].iAreaNum 
+					+ _pstRect[j].iCenterX * _pstRect[j].iAreaNum) / (_pstRect[i].iAreaNum + _pstRect[j].iAreaNum); 
+				_pstRect[i].iCenterY = (_pstRect[i].iCenterY * _pstRect[i].iAreaNum 
+					+ _pstRect[j].iCenterY * _pstRect[j].iAreaNum)/(_pstRect[i].iAreaNum+_pstRect[j].iAreaNum); 
+
+				_pstRect[i].iDiffRate = (_pstRect[i].iDiffRate * _pstRect[i].iAreaNum + 
+					_pstRect[j].iDiffRate * _pstRect[j].iAreaNum) / (_pstRect[i].iAreaNum+_pstRect[j].iAreaNum);
+
+				_pstRect[i].iAreaNum = _pstRect[i].iAreaNum + _pstRect[j].iAreaNum;
+				
+				/*\D0޸ľ\D8\D0\CE\C7\F8\D3\F2j\C4ڶ\D4Ӧ\B5ı\EA\BA\C5*/
+				pucSn = (BoonUint8*)(_pucSnImg + _pstRect[j].top * _iWidth);
+				for (m=_pstRect[j].top; m<=_pstRect[j].bottom; m++)
+				{
+					for (n=_pstRect[j].left; n<=_pstRect[j].right; n++)
+					{
+						if (pucSn[n] == _pstRect[j].iSn)
+						{
+							pucSn[n] = _pstRect[i].iSn;
+						}
+					}
+					pucSn += _iWidth;
+				}
+
+				/*\BAϲ\A2\BA\F3\BD\AB\D7\EE\BA\F3һ\B8\F6\D2Ƶ\BD\B5\B1ǰλ\D6\C3j*/
+				iRectNum--;
+				memcpy(_pstRect + j, _pstRect + iRectNum, sizeof(IVS_TRACK_RECT_S));
+				memset(_pstRect + iRectNum, 0, sizeof(IVS_TRACK_RECT_S));
+				j--;
+			}
+		}
+	}
+
+	return iRectNum;
+}
+
+#endif
+/**********************************************************
+	\C3\FB\B3ƣ\BA	GMM_ImageDiff
+
+	\B9\A6\C4ܣ\BA	\BB\EC\B8\DF˹\B1\B3\BE\B0\BD\A8ģ\A1\AA\A1\AAͼ\CF\F1֡\B2\EE
+
+	\B2\CE\CA\FD\A3\BA	BoonUint8*			_pucPrevImg		\B5\B1ǰ֡ͼ\CF\F1
+	  		BoonUint8*			_pucCurrImg		\C9\CFһ֡ͼ\CF\F1
+			BoonUint8*			_pucDiffImg		\B2\EEֵͼ\CF\F1
+			BoonFloat32*			_pf32GrayMean	\BBҶȾ\F9ֵ
+			BoonInt32				_iImgSize		ͼ\CF\F1\CF\F1\CB\D8\D7\DC\CA\FD
+
+	\B7\B5\BBأ\BA	BoonFloat32			f32Mean
+**********************************************************/
+BoonFloat32 GMM_ImageDiff(BoonUint8* _pucCurrImg, BoonUint8* _pucPrevImg, BoonUint8* _pucDiffImg, BoonInt32 _iImgSize)
+{
+	BoonInt32 i = 0;
+	BoonInt32 iIntensitySum = 0;
+	BoonInt32* piAbsTab = auiAbsTab + Boon_ABS_ZEROPOS;
+	for (i=0; i<_iImgSize; i++)
+	{
+		_pucDiffImg[i] = (BoonUint8)piAbsTab[_pucPrevImg[i] - _pucCurrImg[i]];
+		iIntensitySum += _pucPrevImg[i];	/*ͳ\BC\C6\C1\C1\B6Ⱥ\CD*/
+	}
+
+	return (BoonFloat32)iIntensitySum / _iImgSize;
+}
+
+/**********************************************************
+	\C3\FB\B3ƣ\BA	GMM_CalcRectDiff
+
+	\B9\A6\C4ܣ\BA	\BB\EC\B8\DF˹\B1\B3\BE\B0\BD\A8ģ\A1\AA\A1\AA\BC\C6\CB\E3ǰ\BE\B0\C7\F8\D3\F2\C4\DA֡\B2\EE\BE\F9ֵ
+
+	\B2\CE\CA\FD\A3\BA	BoonUint8*			_pucSnImg		\B1\EA\BA\C5ͼ\CF\F1
+			BoonUint8*			_pucDiffImg		\B2\EEֵͼ\CF\F1
+			IVS_TRACK_RECT_S*	_pstRect		ǰ\BE\B0Ŀ\B1\EA
+			BoonInt32				_iRectNum		ǰ\BE\B0\B8\F6\CA\FD
+			BoonInt32				_iWidth			ͼ\CF\F1\BF\ED\B6\C8
+
+	\B7\B5\BBأ\BA	NULL
+**********************************************************/
+#ifndef ONLY_GMM
+BoonVoid GMM_CalcRectDiff(BoonUint8* _pucSnImg, BoonUint8* _pucDiffImg, IVS_TRACK_RECT_S* _pstRect, 
+						BoonInt32 _iRectNum, BoonInt32 _iWidth)
+{
+	BoonInt32 i = 0;
+	BoonInt32 j = 0;
+	BoonInt32 k = 0;
+	BoonInt32 iThreshold = 8;
+	for (k=0; k<_iRectNum; k++)
+	{
+		BoonInt32 iSn = _pstRect[k].iSn;
+		BoonInt32 iDiffNum = 0;
+		BoonUint8* pucSn	 = (BoonUint8*)(_pucSnImg + _pstRect[k].top * _iWidth);
+		BoonUint8* pucDiff = (BoonUint8*)(_pucDiffImg + _pstRect[k].top * _iWidth);
+		for (i=_pstRect[k].top; i<=_pstRect[k].bottom; i++)
+		{
+			for (j=_pstRect[k].left; j<=_pstRect[k].right; j++)
+			{
+				if (pucSn[j]==iSn && pucDiff[j]>iThreshold)
+				{
+					iDiffNum++;
+				}
+			}
+			pucSn	+= _iWidth;
+			pucDiff += _iWidth;
+		}
+		_pstRect[k].iDiffRate = 100 * iDiffNum / _pstRect[k].iAreaNum;
+	}
+}
+
+#endif
+/**********************************************************
+	\C3\FB\B3ƣ\BA	GMM_RemoveUnunit
+
+	\B9\A6\C4ܣ\BA	\BB\EC\B8\DF˹\B1\B3\BE\B0\BD\A8ģ\A1\AA\A1\AA\A3\BF\A3\BF
+
+	\B2\CE\CA\FD\A3\BA	BoonUint8*			_pucSnImg		\B1\EA\BA\C5ͼ\CF\F1
+			BoonUint8*			_pucFgImg		ǰ\BE\B0ͼ\CF\F1
+			IVS_TRACK_RECT_S*	_pstRect		ǰ\BE\B0Ŀ\B1\EA
+			BoonInt32				_iCurrRectNum	ǰ\BE\B0\B8\F6\CA\FD
+			BoonInt32				_iWidth			ͼ\CF\F1\BF\ED\B6\C8
+
+	\B7\B5\BBأ\BA	BoonInt32				iRectNum		\BAϲ\A2\BA\F3\B5\C4Ŀ\B1\EA\CA\FD
+**********************************************************/
+#ifndef ONLY_GMM
+BoonInt32 GMM_RemoveUnunit(BoonUint8* _pucSnImg, BoonUint8* _pucFgImg, IVS_TRACK_RECT_S* _pstRect,
+						BoonInt32 _iCurrRectNum, BoonInt32 _iWidth)
+{
+	BoonInt32 i = 0;
+	BoonInt32 j = 0;
+	BoonInt32 k = 0;
+	BoonInt32 iRectNum = _iCurrRectNum;
+	for (k=0; k<iRectNum; k++)
+	{
+		BoonInt32 iSn = _pstRect[k].iSn;
+		BoonInt32 iVaPtrNum = 0;	/*4-\C1\DA\D3\F2\B6\BC\CA\C7ǰ\BE\B0\B5ĵ\E3\CA\FD*/
+		BoonInt32 iFgPtrNum = 0;	/*ǰ\BE\B0\B5\E3\CA\FD*/
+		BoonInt32 iRectH = _pstRect[k].bottom - _pstRect[k].top  + 1;
+		BoonInt32 iRectW = _pstRect[k].right  - _pstRect[k].left + 1;
+		BoonFloat32 f32UnThrld = (iRectH * iRectW > 1000) ? 0.21f : 0.15f;
+		BoonUint8* pucFg = (BoonUint8*)(_pucFgImg + (_pstRect[k].top + 1) * _iWidth);
+		BoonUint8* pucSn = (BoonUint8*)(_pucSnImg + (_pstRect[k].top + 1) * _iWidth);
+		for (i=_pstRect[k].top+1; i<_pstRect[k].bottom; i++)
+		{
+			for (j=_pstRect[k].left+1; j<_pstRect[k].right; j++)
+			{
+				if (iSn == pucSn[j])
+				{
+					iFgPtrNum++;
+					if (pucFg[j+1] & pucFg[j-1] & pucFg[j-_iWidth] & pucFg[j+_iWidth])
+					{
+						iVaPtrNum++;
+					}
+				}
+			}
+			pucSn += _iWidth;
+			pucFg += _iWidth;
+		}
+
+		/*\C2˳\FD\C2\FA\D7\E3\CC\F5\BC\FE\B5\C4ǰ\BE\B0Ŀ\B1\EA*/
+		if (iRectH >= 8 && iRectW >= 8 && 
+			(iVaPtrNum<iFgPtrNum*f32UnThrld || iFgPtrNum<iRectH*iRectW*f32UnThrld))
+		{
+			memcpy(_pstRect + k, _pstRect + iRectNum - 1,sizeof(IVS_TRACK_RECT_S));
+			memset(_pstRect+iRectNum-1, 0, sizeof(IVS_TRACK_RECT_S));
+			iRectNum--;
+			k--;
+		}
+	}
+	
+	return iRectNum;
+}
+
+
+#endif
+/**********************************************************
+	\C3\FB\B3ƣ\BA	GMM_CheckConsistency
+
+	\B9\A6\C4ܣ\BA	\BB\EC\B8\DF˹\B1\B3\BE\B0\BD\A8ģ\A1\AA\A1\AAǰ\BE\B0\C7\F8\D3\F2\D3뱳\BE\B0\B5\C4һ\D6\C2\D0Լ\EC\D1\E9
+							 \A3\A8\D3\C3\D3\DA\D2\C5\C1\F4\B6\AAʧ\C5жϣ\A9
+
+	\B2\CE\CA\FD\A3\BA	IVS_GMM_IMGBuff_S*	_pstIMGs		ͼ\CF\F1\C4ڴ\E6
+			IVS_TRACK_RECT_S*	 _pstRect		ǰ\BE\B0Ŀ\B1\EA\BF\F2
+			BoonInt32				_iRectNum		ǰ\BE\B0\B8\F6\CA\FD
+			BoonInt32				_iWidth			ͼ\CF\F1\BF\ED\B6\C8			
+			BoonInt32				_iHeight		ͼ\CF\F1\B8߶\C8
+
+	\B7\B5\BBأ\BA	NULL
+**********************************************************/
+#ifndef ONLY_GMM
+BoonVoid GMM_CheckConsistency(IVS_GMM_IMGBuff_S* _pstIMGs, IVS_TRACK_RECT_S* _pstRect, 
+							BoonInt32 _iRectNum, BoonInt32 _iWidth, BoonInt32 _iHeight)
+{
+	BoonInt32 i = 0;
+	BoonInt32 j = 0;
+	BoonInt32 k = 0;
+	BoonInt32 iSize = _iWidth * _iHeight;
+	BoonUint8* pucBgImg = NULL;
+	BoonInt32* piAbsTab = auiAbsTab + Boon_ABS_ZEROPOS;
+	BoonUint8* pucRectImg = (BoonUint8*)Public_Calloc(iGmmSeg, iSize, 4);
+	if (NULL == pucRectImg)
+	{
+		return;
+	}
+
+	for (k=0; k<_iRectNum; k++)
+	{
+		BoonInt32 iLeft	= IVSMAX((_pstRect[k].left - 1), 1);
+		BoonInt32 iRight  = IVSMIN((_pstRect[k].right + 1), (_iWidth - 2));
+		BoonInt32 iTop	= IVSMAX((_pstRect[k].top - 1), 1);
+		BoonInt32 iBottom = IVSMIN((_pstRect[k].bottom + 1), (_iHeight - 2));
+
+		BoonInt32 iBgGrayMean = 0;	/*ǰ\BE\B0\C7\F8\D3򱳾\B0ͼ\CF\F1\B5\C4\C1\C1\B6Ⱦ\F9ֵ*/
+		BoonInt32 iFgGrayMean = 0;	/*ǰ\BE\B0\C7\F8\D3\F2\B5\B1ǰͼ\CF\F1\B6\D4Ӧǰ\BE\B0\B5\E3\B5\C4\C1\C1\B6Ⱦ\F9ֵ*/
+		BoonInt32 iSurrGrayMean = 0;	/*ǰ\BE\B0\C7\F8\D3\F2\B5\B1ǰͼ\CF\F1\B6\D4Ӧ\B7\C7ǰ\BE\B0\B5\E3\B5\C4\C1\C1\B6Ⱦ\F9ֵ*/
+		BoonInt32 iFgPtrNum = 0;
+		BoonInt32 iSurrPtrNum = 0;
+		BoonInt32 iSn = _pstRect[k].iSn;
+
+		/*\B6\D4ǰ\BE\B0\B5\E3ִ\D0\D0һ\B4\CE\C5\F2\D5Ͳ\D9\D7\F7\A3\A88-\C1\DA\D3򣩣\AC\D2Ի\F1\B5\C3Ŀ\B1\EA\D6\DCΧ\C7\F8\D3\F2\D0\C5Ϣ*/
+		BoonInt32 iPtrDelta = iTop * _iWidth;
+		BoonUint8* pucPrev = (BoonUint8*)(pucRectImg + iPtrDelta - _iWidth);
+		BoonUint8* pucCurr = pucPrev + _iWidth;
+		BoonUint8* pucNext = pucCurr + _iWidth;
+		BoonUint8* pucSnImg = (BoonUint8*)(_pstIMGs->pucSnImg + iPtrDelta);
+		BoonUint8* pucSnTmp = pucSnImg;
+		memset(pucRectImg, 0, iSize);
+		for (i=iTop; i<=iBottom; i++)
+		{
+			for (j=iLeft; j<=iRight; j++)
+			{
+				if (pucSnTmp[j] == iSn)
+				{
+					pucPrev[j-1] = iSn;
+					pucPrev[j  ] = iSn;
+					pucPrev[j+1] = iSn;
+					pucCurr[j-1] = iSn;
+					pucCurr[j  ] = iSn;
+					pucCurr[j+1] = iSn;
+					pucNext[j-1] = iSn;
+					pucNext[j  ] = iSn;
+					pucNext[j+1] = iSn;
+				}
+			}
+			pucPrev += _iWidth;
+			pucCurr += _iWidth;
+			pucNext += _iWidth;
+			pucSnTmp += _iWidth;
+		}
+
+		/*\BC\C6\CB\E3\C1\C1\B6Ⱦ\F9ֵ*/
+		pucSnTmp = (BoonUint8*)(pucRectImg + iPtrDelta);				/*\D0޸\C4Ϊ\C1\D9ʱ\B1\EA\BA\C5ͼ\CF\F1\B5ĵ\D8ַ*/
+		pucCurr  = (BoonUint8*)(_pstIMGs->pucSmoothImg + iPtrDelta);	/*\D0޸\C4Ϊ\B5\B1ǰͼ\CF\F1\B5ĵ\D8ַ*/
+		pucBgImg = (BoonUint8*)(_pstIMGs->pucBgImg + iPtrDelta);
+		for (i=iTop; i<=iBottom; i++)
+		{
+			for (j=iLeft; j<=iRight; j++)
+			{
+				if (pucSnTmp[j] == iSn)
+				{
+					if (pucSnImg[j] == iSn)
+					{
+						iFgGrayMean += pucCurr[j];
+						iBgGrayMean += pucBgImg[j];
+						iFgPtrNum++;
+					}
+					else
+					{
+						iSurrGrayMean += pucBgImg[j];
+						iSurrPtrNum++;
+					}
+				}
+			}
+			pucCurr  += _iWidth;
+			pucBgImg += _iWidth;
+			pucSnImg += _iWidth;
+			pucSnTmp += _iWidth;
+		}
+
+		iFgGrayMean /= iFgPtrNum + 1;
+		iBgGrayMean /= iFgPtrNum + 1;
+		iSurrGrayMean /= iSurrPtrNum + 1;
+
+		_pstRect[k].stFeature.iGradMore = piAbsTab[iFgGrayMean - iSurrGrayMean];
+		_pstRect[k].stFeature.iGradLess = piAbsTab[iBgGrayMean - iSurrGrayMean];
+	}
+
+	Public_Free(iGmmSeg, pucRectImg, iSize);
+	pucRectImg = NULL;
+}
+
+#endif
+/**********************************************************
+	\C3\FB\B3ƣ\BA	GMM_CalcRectFeatures
+
+	\B9\A6\C4ܣ\BA	\BB\EC\B8\DF˹\B1\B3\BE\B0\BD\A8ģ\A1\AA\A1\AA\BC\C6\CB\E3ǰ\BE\B0Ŀ\B1\EA\B5\C4\C1\C1\B6ȶԱȶ\C8\CC\D8\D5\F7
+
+	\B2\CE\CA\FD\A3\BA	IVS_GMM_IMGBuff_S*		_pstIMGs		ͼ\CF\F1\C4ڴ\E6
+			IVS_TRACK_RECT_S*		_pstRect		ǰ\BE\B0Ŀ\B1\EA
+			BoonInt32					_iRectNum		ǰ\BE\B0\B8\F6\CA\FD
+			BoonInt32					_iWidth			ͼ\CF\F1\BF\ED\B6\C8
+
+	\B7\B5\BBأ\BA	NULL
+**********************************************************/
+#ifndef ONLY_GMM
+BoonVoid GMM_CalcRectFeatures(IVS_GMM_IMGBuff_S* _pstIMGs, IVS_TRACK_RECT_S* _pstRect, 
+							BoonInt32 _iRectNum, BoonInt32 _iWidth)
+{	
+	BoonInt32 i = 0;
+	BoonInt32 j = 0;
+	BoonInt32 k = 0;
+	for (k=0; k<_iRectNum; k++)
+	{
+		BoonInt32 iGrayMean = 0;
+		BoonInt32 iBiggerNum = 0;		/*ǰ\BE\B0\B5\E3\B6\D4Ӧͼ\CF\F1\B5\C4\C1\C1\B6ȴ\F3\D3ڱ\B3\BE\B0ͼ\CF\F1\B5ĵ\E3\CA\FD*/
+		BoonInt32 iSmallerNum = 0;	/*ǰ\BE\B0\B5\E3\B6\D4Ӧͼ\CF\F1\B5\C4\C1\C1\B6\C8С\D3ڱ\B3\BE\B0ͼ\CF\F1\B5ĵ\E3\CA\FD*/
+		BoonInt32 iSn = _pstRect[k].iSn;
+		
+		BoonInt32 iPtrOff = _pstRect[k].top * _iWidth;
+		BoonUint8* pucSn = (BoonUint8*)(_pstIMGs->pucSnImg + iPtrOff);
+		BoonUint8* pucFg = (BoonUint8*)(_pstIMGs->pucFgImg + iPtrOff);
+		BoonUint8* pucBg = (BoonUint8*)(_pstIMGs->pucBgImg + iPtrOff);
+		BoonUint8* pucCurr = (BoonUint8*)(_pstIMGs->pucSmoothImg + iPtrOff);
+		for (i = _pstRect[k].top; i <= _pstRect[k].bottom; i++)
+		{
+			for (j = _pstRect[k].left; j <= _pstRect[k].right; j++)
+			{
+				if (iSn==pucSn[j] && pucFg[j])
+				{
+					iGrayMean += pucCurr[j];
+					if (pucCurr[j] > pucBg[j])
+					{
+						iBiggerNum++;
+					}
+					else
+					{
+						iSmallerNum++;
+					}
+				}
+			}
+			pucSn += _iWidth;
+			pucFg += _iWidth;
+			pucBg += _iWidth;
+			pucCurr += _iWidth;
+		}
+
+		/*\B5õ\BD\CC\D8\D5\F7*/
+		_pstRect[k].iNewSn = 0;
+		_pstRect[k].stFeature.iAveGray = iGrayMean / _pstRect[k].iAreaNum;
+		if (iSmallerNum + iBiggerNum == 0)
+		{
+			_pstRect[k].stFeature.iFgConsis = 50;
+		}
+		else
+		{
+			_pstRect[k].stFeature.iFgConsis = iBiggerNum * 100 / (iSmallerNum + iBiggerNum);
+		}
+	}
+}
+
+#endif
+/**********************************************************
+	\C3\FB\B3ƣ\BA	GMM_Update
+
+	\B9\A6\C4ܣ\BA	\BB\EC\B8\DF˹\B1\B3\BE\B0\BD\A8ģ\A1\AA\A1\AA\B1\B3\BE\B0\B8\FC\D0\C2
+
+	\B2\CE\CA\FD\A3\BA	IVS_GMM_S*			_pstGmm			GMMģ\BF\E9ָ\D5\EB
+			BoonInt32				_iImgWidth		ͼ\CF\F1\BF\ED\B6\C8			
+			BoonInt32				_iImgHeight		ͼ\CF\F1\B8߶\C8
+
+	\B7\B5\BBأ\BA	NULL
+**********************************************************/
+static BoonVoid GMM_Update(IVS_GMM_S* _pstGmm, BoonInt32 _iImgWidth, BoonInt32 _iImgHeight)
+{
+	BoonInt32 iPixelNum = _iImgWidth * _iImgHeight;
+	
+
+#ifdef HAVE_TBB
+	/*\B6\D4\D3ڻᷢ\C9\FA\B8ı\E4\B5Ĳ\CE\CA\FD*/
+	if (f32VarRate < FLT_EPSILON)
+	{
+		f32VarRate = 0;
+	}
+	_pstGmm->pstTbbPara->pucCurrImg	= _pstGmm->pstImgBuff->pucSmoothImg;
+	_pstGmm->pstTbbPara->f32VarRate	= f32VarRate;
+
+	parallel_for(blocked_range<size_t>( 0, iPixelNum ), TBB_GMM_UpdateProcess(_pstGmm->pstTbbPara));
+#else
+	
+
+
+	IVS_GMM_INFO_S* pstGmmPtr1 = _pstGmm->pstGmmInfo;
+	BoonUint8* pucBgImg1 = _pstGmm->pstImgBuff->pucBgImg;
+	BoonUint8* pucFgImg1 = _pstGmm->pstImgBuff->pucFgImg;
+	
+	BoonUint8* pucCurr1  = _pstGmm->pstImgBuff->pucSmoothImg;
+	
+	
+	#pragma omp parallel for  
+	for( int y = 0; y<iPixelNum; y++)
+	{
+
+			BoonInt32 iTmpValue = 0; 
+			BoonFloat32 f32Mean = 0.0f;
+			BoonFloat32 f32Var  = 0.0f;
+			BoonFloat32 f32Dist = 0.0f;
+			BoonFloat32 f32DistSquare  = 0.0f;
+			BoonFloat32 f32WeightScale = 0.0f;
+			BoonInt32 iFrameNo	= _pstGmm->iFrameNo;
+			BoonInt32 iModelNum   = _pstGmm->iMixtures;
+			BoonInt32	iStillTime  = _pstGmm->stGmmPara.iStilltoBgTime;
+			BoonFloat32 f32VarMax = _pstGmm->stGmmPara.f32VarMax;
+			BoonFloat32 f32VarMin = _pstGmm->stGmmPara.f32VarMin;
+			BoonFloat32 f32Alpha  = 1.0f / _pstGmm->stGmmPara.iWindowsSize;
+			BoonFloat32 f32VarRate = _pstGmm->f32VarCorrectRate;
+			if (f32VarRate < FLT_EPSILON)
+			{
+				f32VarRate = 0;
+			}
+
+
+		IVS_GMM_INFO_S* pstGmmPtr =  pstGmmPtr1 + y ;
+		BoonUint8* pucBgImg = pucBgImg1 + y;
+		BoonUint8* pucFgImg = pucFgImg1 + y;
+		BoonUint8* pucCurr = pucCurr1 + y ;
+		BoonInt32 k = 0;
+		BoonInt32 m = 0;
+		BoonBool  bMatched = BoonFalse;	
+		BoonInt32 iUpdataFlag = 1;	
+		BoonFloat32 f32WeightSum = 0;
+		BoonFloat32 f32MatchedWeight = 0;
+		BoonFloat32 f32Intensity = *(pucCurr);
+		
+		if (*(_pstGmm->pstImgBuff->pucBoundaryImg+y) == 0)
+		{
+			
+			continue;
+		}
+
+		
+		
+		for (k=0; k<iModelNum; k++)
+		{
+			BoonInt32 iOrder = pstGmmPtr->aiOrder[k];
+			BoonFloat32 f32Weight = pstGmmPtr->af32Weight[iOrder];
+			f32WeightSum += f32Weight;
+			if (f32Weight < FLT_EPSILON )
+			{
+				break;
+			}
+			
+			f32Mean = pstGmmPtr->af32Mean[iOrder];
+			f32Var  = pstGmmPtr->af32Variance[iOrder];
+			f32Dist = f32Intensity - f32Mean;
+			f32DistSquare = f32Dist * f32Dist;
+			if( f32DistSquare < 6 * (f32Mean * 0.004 + 0.4) * f32VarRate * f32Var)
+			{
+				f32WeightSum -= f32Weight;
+
+				if (iUpdataFlag)
+				{
+					pstGmmPtr->af32Weight[iOrder] += f32Alpha * (1.0f - f32Weight);
+				}
+
+				if (pstGmmPtr->iGetBGTime)
+				{
+					pstGmmPtr->af32Mean[iOrder] += 0.2f * f32Dist;
+				}
+				else
+				{
+					pstGmmPtr->af32Mean[iOrder] += 5 * f32Alpha * f32Dist;
+				}
+
+				f32Var = IVSMAX((f32Var + 2 * f32Alpha * (f32DistSquare - f32Var)), f32VarMin);
+				if (f32Var >= f32VarMax)
+				{
+					f32Var = f32VarMax;
+				}
+
+				pstGmmPtr->af32Variance[iOrder] = f32Var;
+				pstGmmPtr->af32SortKey[iOrder]  = f32Weight * f32Weight / f32Var;
+				*(pucBgImg) = (BoonUint8)pstGmmPtr->af32Mean[iOrder];
+				
+			
+				for(m=k-1; m>=0; m--)
+				{
+					if (pstGmmPtr->af32SortKey[pstGmmPtr->aiOrder[m]] >= 
+						pstGmmPtr->af32SortKey[pstGmmPtr->aiOrder[m+1]])
+					{
+						break;
+					}
+
+				
+					iTmpValue = pstGmmPtr->aiOrder[m];
+					pstGmmPtr->aiOrder[m]	= pstGmmPtr->aiOrder[m+1];
+					pstGmmPtr->aiOrder[m+1] = iTmpValue;
+				}
+
+				bMatched = BoonTrue;
+				f32MatchedWeight = f32Weight;
+				break;
+			}
+		}
+
+		
+		if( !bMatched  && iUpdataFlag) 
+		{
+			bMatched = BoonTrue;
+			k = IVSMIN(k, (iModelNum - 1));
+			iTmpValue = pstGmmPtr->aiOrder[k];
+			f32WeightSum += _pstGmm->f32InitWeight - pstGmmPtr->af32Weight[iTmpValue];
+			pstGmmPtr->af32Mean[iTmpValue] = f32Intensity;
+			pstGmmPtr->af32Weight[iTmpValue] = _pstGmm->f32InitWeight;
+			pstGmmPtr->af32SortKey[iTmpValue] = _pstGmm->f32InitSortKey;
+			pstGmmPtr->af32Variance[iTmpValue] = _pstGmm->f32InitVar;
+
+			pstGmmPtr->iMvStartFrm  = -1;
+			pstGmmPtr->iStcStartFrm = -1;
+		}
+		else
+		{
+			for( ; k<iModelNum; k++)
+			{
+				f32WeightSum += pstGmmPtr->af32Weight[k];
+			}
+		}
+
+		f32WeightScale = 1.0f / f32WeightSum;
+		for(k=0; k<iModelNum; k++)
+		{
+			pstGmmPtr->af32Weight[pstGmmPtr->aiOrder[k]] *= f32WeightScale;
+			pstGmmPtr->af32SortKey[k] *= f32WeightScale * f32WeightScale;
+		}
+
+		
+		if (f32MatchedWeight<0.3 && !pstGmmPtr->iGetBGTime)
+		{
+			*(pucFgImg) = 255;	
+			*(pucBgImg) = (BoonUint8)pstGmmPtr->af32Mean[pstGmmPtr->aiOrder[0]];
+		}
+		else
+		{
+			*(pucFgImg) = 0;	
+		}
+
+		
+		if (pstGmmPtr->iGetBGTime > 0)
+		{
+			pstGmmPtr->iGetBGTime--;
+		}
+         
+		
+	}
+#endif	
+}
+static BoonInt32 LPL_Filter(BoonUint8 *_pucImgbuf, BoonUint32 _iWidth, BoonUint32 _iHeight, BoonUint32 _iValue1, BoonUint32 _iValue2)
+{
+	BoonInt32 widthBytes = _iWidth;
+	BoonUint32  i,j,k;
+	BoonUint32  count=0;
+	BoonUint8 *lpSrc;
+	BoonInt32 step;
+	BoonUint32 iwidth = _iWidth - 1;
+	BoonUint32 iheight = _iHeight - 1;
+
+
+	BoonInt32 iThresholdp1 = _iValue1;
+	BoonInt32 iThresholdp2 = _iValue2;
+
+	for(i=0;i<_iHeight;i++)  
+	{
+		step = i*widthBytes;
+		lpSrc=_pucImgbuf+step;
+		for(j=0;j<iwidth;j++)
+		{
+			if((*lpSrc))
+			{
+				count++;
+				if(!(*(lpSrc+1)))
+				{
+					if(count<iThresholdp1)
+					{  
+						memset((lpSrc-count+1),0,count);
+					}
+					count=0;   
+				}
+			}
+			lpSrc++;
+		}
+		if((*lpSrc==255))
+		{
+			count++;
+			if(count<iThresholdp1)
+			{  
+				memset((lpSrc-count+1),0,count);
+			}
+			count=0;   
+		}
+	}
+	for(i=0;i<_iWidth;i++)                       
+	{
+		count = 0;    
+		lpSrc = _pucImgbuf + i;
+		for(j=0;j<iheight;j++)
+		{
+			if(*lpSrc==255)
+			{
+				count++;
+				if(*(lpSrc+widthBytes)==0)
+				{
+					if((count<iThresholdp2))
+					{  
+						for(k=0;k<count;k++)
+						{
+						*(lpSrc-k*widthBytes)=0;
+						}
+					}
+					count=0;    
+				}
+			}
+			lpSrc += widthBytes;
+		}
+		if((*lpSrc==255))
+		{  
+			count++;
+			if((count<iThresholdp2))
+			{  
+				for(k=0;k<count;k++)
+				{
+					*(lpSrc-k*widthBytes)=0;
+				}
+			}
+			count=0;    
+		}
+	}
+
+
+	return Boon_ALG_OK;
+}
+
+/**********************************************************
+	\C3\FB\B3ƣ\BA	IVS_GMM_Process
+
+	\B9\A6\C4ܣ\BA	\BB\EC\B8\DF˹\B1\B3\BE\B0\BD\A8ģ\A1\AA\A1\AA\B4\A6\C0\ED\BA\AF\CA\FD
+
+	\B2\CE\CA\FD\A3\BA	Boon_HANDLE     _hModule		GMMģ\BF\E9ָ\D5\EB
+	  		IVS_TRACK_RECT_S*	_pstFgRect		ǰ\BE\B0Ŀ\B1\EA\BF\F2
+			BoonInt32				_iImgWidth		ͼ\CF\F1\BF\ED\B6\C8			
+			BoonInt32				_iImgHeight		ͼ\CF\F1\B8߶\C8
+
+	\B7\B5\BBأ\BA	BoonInt32				iRectNum		ǰ\BE\B0Ŀ\B1\EA\CA\FD
+**********************************************************/
+BoonInt32 IVS_GMM_Process(Boon_HANDLE _hModule, BoonUint8* _pucSrc, 
+#ifndef ONLY_GMM
+						IVS_TRACK_RECT_S* _pstFgRect, 
+#endif
+						Boon_ALG_POLYGON_REGION_S* _pstBoundary,BoonInt32 _iImgWidth, BoonInt32 _iImgHeight)
+{
+
+
+	GMM_Handle   Handle;
+	
+	BoonBool  bAreaGet = BoonFalse;
+	BoonFloat32 f32Tmp = 0.0f;
+	BoonInt32 iRectNum = Boon_MAX_FGRECTNUM;
+
+	BoonInt32 iMinArea = 0;
+	BoonInt32 iMaxArea = 0;
+	BoonUint8* pucPtrTmp = NULL;
+	BoonInt32 iMergeRate = 0;	
+	BoonFloat32 f32GrayMean = 0.0f;
+	IVS_GMM_IMGBuff_S* pstIMGs = 0;
+	BoonInt32 i,j;
+	Boon_ALG_POINT_S ptCur;
+	struct timeval tv1;
+	struct timeval tv2;
+ gettimeofday(&tv1,NULL);
+	Handle = (GMM_Handle)_hModule;
+	if(Handle==NULL)
+	{
+		printf("1231 \n"); 
+		return  0;
+	}
+    iMinArea = Handle->stGmmPara.iTgtMinArea;
+	iMaxArea = Handle->stGmmPara.iTgtMaxArea;
+	iMergeRate = Handle->stGmmPara.iTgtMergeRate * 10 + 80;	
+	pstIMGs = Handle->pstImgBuff;
+
+	Handle->iFrameNo++;
+
+	if(!iGmmInitFlag)
+	{
+		for (i=0;i<_iImgHeight;i++)
+		{
+			for (j=0;j<_iImgWidth;j++)
+			{
+				
+				
+					Handle->pstImgBuff->pucBoundaryImg[i*_iImgWidth+j] = 1;
+				
+			}
+		}
+		iGmmInitFlag = 1;
+	}
+
+	
+	GMM_GaussSmooth(_pucSrc, pstIMGs->pucSmoothImg, _iImgWidth, _iImgHeight);
+
+	
+ 	f32GrayMean = GMM_ImageDiff(pstIMGs->pucSmoothImg, pstIMGs->pucPrevImg, 
+								pstIMGs->pucDiffImg, _iImgHeight * _iImgWidth);
+	gettimeofday(&tv2,NULL);
+	//printf("gmm1 time is %d ms \n",tv2.tv_sec*1000 + tv2.tv_usec/1000 - tv1.tv_sec*1000 - tv1.tv_usec/1000);		
+ 	 gettimeofday(&tv1,NULL);
+	Handle->f32GrayAve = Handle->f32GrayAve * 0.9f + 0.1f * f32GrayMean;
+	Handle->f32VarCorrectRate *= 0.5f;
+	if (Handle->f32GrayAve > f32GrayMean)
+	{
+		f32Tmp = Handle->f32GrayAve - f32GrayMean;
+	}
+	else
+	{
+		f32Tmp = f32GrayMean - Handle->f32GrayAve;
+	}
+	Handle->f32VarCorrectRate += f32Tmp * 1.1f + 0.5f;
+	if (Handle->f32VarCorrectRate > 5)
+	{
+		Handle->f32VarCorrectRate = 5.0f;
+	}
+
+	
+	GMM_Update(Handle, _iImgWidth, _iImgHeight);
+		
+	gettimeofday(&tv2,NULL);
+	//printf("gmm2 time is %d ms \n",tv2.tv_sec*1000 + tv2.tv_usec/1000 - tv1.tv_sec*1000 - tv1.tv_usec/1000);
+	 gettimeofday(&tv1,NULL);	
+	/*GMM_Expansion3x3(pstIMGs->pucFgImg, pstIMGs->pucSnImg, _iImgWidth, _iImgHeight);
+	memcpy(pstIMGs->pucSnImg,pstIMGs->pucFgImg,_iImgWidth*_iImgHeight);
+	GMM_Expansion3x3(pstIMGs->pucFgImg, pstIMGs->pucSnImg, _iImgWidth, _iImgHeight);*/
+
+
+#ifndef ONLY_GMM
+	
+	if (_iImgWidth < 200)//add by mhm 2013.09.28 С\B7ֱ\E6\C2\CAͼ\CF\F1\CA\CA\D3ò\CE\CA\FD
+	{
+	
+		GMM_Expansion7x7(pstIMGs->pucFgImg, pstIMGs->pucSnImg, _iImgWidth, _iImgHeight);
+	}
+	else
+	{
+		GMM_Expansion7x7(pstIMGs->pucFgImg, pstIMGs->pucSnImg, _iImgWidth, _iImgHeight);
+		
+	}
+	#ifdef ShowResult
+		
+//	memcpy(pstIMGs->pucSnImg,pstIMGs->pucFgImg, _iImgHeight*_iImgWidth);
+	CvMat* pstFgImg = cvCreateMatHeader(_iImgHeight,  _iImgWidth, CV_8UC1);
+	CvMat* pstFgImg1 = cvCreateMatHeader(_iImgHeight,  _iImgWidth, CV_8UC1);
+
+	cvNamedWindow("Fg1 Img", 0);
+	pstFgImg->data.ptr = pstIMGs->pucFgImg;
+	cvShowImage("Fg1 Img", pstFgImg);
+	cvNamedWindow("Fg2 Img", 0);
+	LPL_Filter(pstIMGs->pucSnImg,_iImgWidth,_iImgHeight,10,30);
+	
+	pstFgImg1->data.ptr = pstIMGs->pucSnImg;
+         //pstFgImg->data.ptr = pstTripWire->pstIVSGmm->pstImgBuff->pucBoundaryImg;
+	
+	
+	
+	cvShowImage("Fg2 Img", pstFgImg1);
+	cvSaveImage("22.jpg",pstFgImg);
+	cvReleaseMat(&pstFgImg);
+	//cvRectangle(show_img, cvPoint(pstTgtInfo->stRect.left,pstTgtInfo->stRect.top), cvPoint(pstTgtInfo->stRect.right,pstTgtInfo->stRect.Boonttom), cvScalar(0, 0, 255), 3, 4, 0 ); 
+#endif
+	
+	bAreaGet = CCL_AreaRectGet(_pstFgRect, &(iRectNum), pstIMGs->pucSnImg, iMinArea, iMaxArea, _iImgWidth, _iImgHeight);
+	if (!bAreaGet)
+	{
+		iRectNum = 0;
+	}
+	
+	
+        gettimeofday(&tv2,NULL);
+	//printf("gmm3 time is %d ms \n",tv2.tv_sec*1000 + tv2.tv_usec/1000 - tv1.tv_sec*1000 - tv1.tv_usec/1000);
+	
+	//GMM_CalcRectDiff(pstIMGs->pucSnImg, pstIMGs->pucDiffImg, _pstFgRect, iRectNum, _iImgWidth);
+
+	
+	/*iRectNum = GMM_RectMerge(pstIMGs->pucSnImg, _pstFgRect, iRectNum, iMergeRate, _iImgWidth);
+
+	
+	if (_iImgWidth > 200)
+	{
+		iRectNum = GMM_RemoveUnunit(pstIMGs->pucSnImg, pstIMGs->pucFgImg, _pstFgRect, iRectNum, _iImgWidth);
+	}*/	
+        
+
+	//GMM_CheckConsistency(pstIMGs, _pstFgRect, iRectNum, _iImgWidth, _iImgHeight);
+
+	
+	//GMM_CalcRectFeatures(pstIMGs, _pstFgRect, iRectNum, _iImgWidth);
+#endif
+	
+	pucPtrTmp = pstIMGs->pucSmoothImg;
+	pstIMGs->pucSmoothImg = pstIMGs->pucPrevImg;
+	pstIMGs->pucPrevImg	  = pucPtrTmp;
+#ifdef ONLY_GMM
+	return 0;
+#else
+	return iRectNum;
+#endif
+	
+}
+
+
+/**********************************************************
+	\C3\FB\B3ƣ\BA	IVS_GMM_PostProcess
+
+	\B9\A6\C4ܣ\BA	\BB\EC\B8\DF˹\B1\B3\BE\B0\BD\A8ģ\A1\AA\A1\AA\BA\F3\B4\A6\C0\ED
+
+	\B2\CE\CA\FD\A3\BA	IVS_MOVE_S*			_pstBgModel		\B1\B3\BE\B0ģ\D0\CD
+			IVS_TRACK_S*		_pstTrackInfo	\B8\FA\D7\D9\D0\C5Ϣ
+			IVS_TRACK_MLYRECT_S* _pstRect		Ŀ\B1\EA\BF\F2
+			BoonInt32				_iRectNum		ǰ\BE\B0\B8\F6\CA\FD
+			BoonInt32				_iImgW			ͼ\CF\F1\BF\ED\B6\C8
+			BoonInt32				_iImgH			ͼ\CF\F1\B8߶\C8
+
+	\B7\B5\BBأ\BA	Boon_ALG_OK
+**********************************************************/
+#ifndef ONLY_GMM
+IVS_STATUS_E IVS_GMM_PostProcess(IVS_GMM_S* _pstGmm, IVS_TRACK_S* _pstTrackInfo, 
+								 IVS_TRACK_RECT_S* _pstRect, BoonInt32 _iRectNum, 
+								 BoonInt32 _iImgW, BoonInt32 _iImgH)
+{
+	BoonInt32 i = 0;
+	BoonInt32 j = 0;
+	BoonInt32 k = 0;
+	BoonInt32 iFrameNo  = _pstGmm->iFrameNo;
+	BoonInt32* piAbsTab = auiAbsTab + Boon_ABS_ZEROPOS;
+	BoonUint8* pucSnImg = _pstGmm->pstImgBuff->pucSnImg;
+	IVS_GMM_INFO_S* pstGmmInfo = _pstGmm->pstGmmInfo;
+	IVS_TRACK_TRAJECT_S* pstTrackResult = _pstTrackInfo->pstTrackRult;
+	
+	//\BD\F8\D0зָ\EE\B7\D6\C0\EB\BD\C3\D5\FD
+	for (k=0; k<_pstTrackInfo->iLists; k++)
+	{
+		if (pstTrackResult[k].stMatchInfo.bSepaRate)	/* \B7\D6\C0\EB\BF\E9\D6\D8\D0¶\A8λ\A3\AC\B2\A2\D6\D8\D0¼\C6\CB\E3 */
+		{
+			BoonUint8* pucSn     = NULL;
+			BoonInt32 iPtrOff    = 0;
+			BoonInt32 iTopNew	   = 0;
+			BoonInt32 iLeftNew   = 0;
+			BoonInt32 iFgPtrNum  = 0;
+			BoonInt32 iEnegyMaxX = -10000;
+			BoonInt32 iEnegyMaxY = -10000;
+
+			/* \C9\CF\CF\C2\D7\F3\D3\D2Ѱ\D5\D2\D7\EE\BC\D1 */
+			BoonInt32 iMaxOffX = IVSMAX(2, IVSMIN(6, (piAbsTab[pstTrackResult[k].iVolecX] / 32)));	/* Ѱ\D5\D2x\B7\B6Χ\A3\AC\CBٶȵ\C41/4 */
+			BoonInt32 iMaxOffY = IVSMAX(2, IVSMIN(6, (piAbsTab[pstTrackResult[k].iVolecY] / 32)));	/* Ѱ\D5\D2y\B7\B6Χ */
+
+			IVS_TRACK_RECT_S* pstRectTmp = pstTrackResult[k].astObjRect;
+			BoonInt32 iSn		= pstRectTmp->iSn;		
+			BoonInt32 iRectW  = pstRectTmp->right - pstRectTmp->left + 1;
+			BoonInt32 iRectH  = pstRectTmp->bottom - pstRectTmp->top + 1;
+			BoonInt32 iStartX = IVSMAX((pstRectTmp->left - iMaxOffX), 0);	/* \D0µ\C4\C6\F0ʼλ\D6\C3 */
+			BoonInt32 iStartY = IVSMAX((pstRectTmp->top - iMaxOffY), 0);
+			BoonInt32 iEndX	= pstRectTmp->left + iMaxOffX;
+			BoonInt32 iEndY	= pstRectTmp->top + iMaxOffY;
+			if (iEndX + iRectW >= _iImgW)
+			{
+				iEndX -= (iEndX + iRectW - _iImgW + 1);
+			}
+			if (iEndY + iRectH >= _iImgH)
+			{
+				iEndY -= (iEndY + iRectH - _iImgH + 1);
+			}	
+
+			/*\D7\F3\D3\D2Ѱ\D5\D2*/
+			pucSn = (BoonUint8*)(pucSnImg + pstRectTmp->top * _iImgW);
+			for (j=iStartX; j<=iEndX; j++)		/*\CF\C8Y\B7\BD\CF\F2\A3\AC\D4\D9X\B7\BD\CF\F2*/
+			{
+				BoonUint8* pucSnTmp = pucSn + j;
+				for (i=pstRectTmp->top; i<=pstRectTmp->bottom; i++)
+				{
+					if (iSn == *(pucSnTmp))
+					{
+						iFgPtrNum--;
+					}
+
+					if (iSn == pucSnTmp[iRectW])
+					{
+						iFgPtrNum++;
+					}
+					pucSnTmp += _iImgW;
+				}
+
+				if (iEnegyMaxX < iFgPtrNum)
+				{
+					iEnegyMaxX = iFgPtrNum;
+					iLeftNew = j;
+				}
+			}
+
+			iFgPtrNum = 0;
+			iPtrOff = iRectH * _iImgW;
+			for (i=iStartY; i<=iEndY; i++)		//\CF\C8X\B7\BD\CF\F2\A3\AC\D4\D9Y\B7\BD\CF\F2
+			{
+				for (j=pstRectTmp->left; j<=pstRectTmp->right; j++)
+				{
+					if (iSn == pucSn[j])
+					{
+						iFgPtrNum--;
+					}
+					if (iSn == pucSn[j + iPtrOff])
+					{
+						iFgPtrNum++;
+					}
+				}
+				pucSn += _iImgW;
+				if (iEnegyMaxY < iFgPtrNum)
+				{
+					iEnegyMaxY = iFgPtrNum;
+					iTopNew = i;
+				}
+			}
+
+			pstRectTmp->left   = iLeftNew;
+			pstRectTmp->right  = iLeftNew + iRectW - 1;
+			pstRectTmp->top	   = iTopNew;
+			pstRectTmp->bottom = iTopNew + iRectH - 1;
+		}
+	}
+
+	//ƥ\C5\E4\D0\C5Ϣ\B3\F5ʼ\BB\AF
+	for (k=0; k<_pstTrackInfo->iLists; k++)
+	{
+		pstTrackResult[k].stMatchInfo.bConBin = 0;
+		pstTrackResult[k].stMatchInfo.bSepaRate = 0;
+	}
+
+	for (k=0; k<_iRectNum; k++)
+	{
+		if (_pstRect[k].iNewSn > 0)
+		{
+			BoonUint8* pucSn = (BoonUint8*)(pucSnImg + _pstRect->top * _iImgW);
+			for (i=_pstRect->top; i<=_pstRect->bottom; i++)
+			{
+				for (j=_pstRect->left; j<=_pstRect->right; j++)
+				{
+					if (pucSn[j] == _pstRect[k].iSn)	//Ϊ\B1\EAʶ\A3\BB\C9\E8\D6ö\D4Ӧ\B5\C4
+					{
+						pucSn[j] = _pstRect[k].iNewSn;
+					}
+				}
+				pucSn += _iImgW;
+			}
+		}
+	}
+
+	for (k=0; k<_pstTrackInfo->iLists; k++)
+	{
+		if (pstTrackResult[k].iStatusMov==1 && pstTrackResult[k].iLosTime==0)	//1-\D4˶\AFĿ\B1꣬2-\BE\B2ֹĿ\B1\EA
+		{
+			BoonInt32	iSn = pstTrackResult[k].astObjRect[0].iSn;	
+			IVS_TRACK_RECT_S* pstRectTmp = pstTrackResult[k].astObjRect;	
+
+			BoonUint8* pucSn = (BoonUint8*)(pucSnImg + pstRectTmp->top * _iImgW);
+			IVS_GMM_INFO_S* pstGMMPtr = (IVS_GMM_INFO_S*)(pstGmmInfo + pstRectTmp->top * _iImgW);
+			for (i=pstRectTmp->top; i<=pstRectTmp->bottom; i++)
+			{
+				for (j=pstRectTmp->left; j<=pstRectTmp->right; j++)
+				{
+					if (pucSn[j] == iSn)			//Ϊ\B1\EAʶ\C9\E8\D6ö\D4Ӧ\B5\C4
+					{
+						if (pstGMMPtr[j].iMvStartFrm < 0)
+						{
+							pstGMMPtr[j].iMvStartFrm = iFrameNo;
+							pstGMMPtr[j].iMvConsistNum = 0;
+						}
+						pstGMMPtr[j].iMvConsistNum++;
+					}
+				}
+				pucSn += _iImgW;
+				pstGMMPtr += _iImgW;
+			}
+		}
+
+		if ((pstTrackResult[k].iStillLife || pstTrackResult[k].iStatusMov==2) && 
+			pstTrackResult[k].iLosTime==0)	//1-\D4˶\AFĿ\B1꣬2-\BE\B2ֹĿ\B1\EA
+		{
+			BoonInt32 iSn = pstTrackResult[k].astObjRect[0].iSn;	
+			IVS_TRACK_RECT_S* pstRectTmp = pstTrackResult[k].astObjRect;	
+			BoonUint8* pucSn = (BoonUint8*)(pucSnImg + pstRectTmp->top * _iImgW);
+			IVS_GMM_INFO_S* pstGMMPtr = (IVS_GMM_INFO_S*)(pstGmmInfo + pstRectTmp->top * _iImgW);
+			for (i=pstRectTmp->top; i<=pstRectTmp->bottom; i++)
+			{
+				for (j=pstRectTmp->left; j<=pstRectTmp->right; j++)
+				{
+					if (pucSn[j] == iSn)			//Ϊ\B1\EAʶ\A3\AC\C9\E8\D6ö\D4Ӧ\B5\C4
+					{
+						if (pstGMMPtr[j].iStcStartFrm < 0)
+						{
+							pstGMMPtr[j].iStcStartFrm = iFrameNo;
+							pstGMMPtr[j].iStcConsistNum = 0;
+						}
+						pstGMMPtr[j].iStcConsistNum++;
+					}
+				}
+				pucSn += _iImgW;
+				pstGMMPtr += _iImgW;
+			}
+		}
+	}
+	
+	return Boon_ALG_OK;
+}
+
+#endif
+
+
+
+/**********************************************************
+	\C3\FB\B3ƣ\BA	IVS_GMM_Release
+
+	\B9\A6\C4ܣ\BA	\BB\EC\B8\DF˹\B1\B3\BE\B0\BD\A8ģ\A1\AA\A1\AA\CAͷ\C5
+
+	\B2\CE\CA\FD\A3\BA	Boon_HANDLE _hModule	GMMģ\BF\E9ָ\D5\EB
+
+	\B7\B5\BBأ\BA	IVS_STATUS_E		Boon_ALG_OK
+**********************************************************/
+IVS_STATUS_E  IVS_GMM_Release(Boon_HANDLE _hModule)
+{
+	 GMM_Handle   Handle;
+	 BoonInt32 iPixelSize =0;
+	 Handle = (GMM_Handle)_hModule;
+	 if(Handle ==NULL)
+	{
+		 return Boon_ALG_FAIL ;
+	 }
+	
+	 iGmmInitFlag = 0;   
+	 iPixelSize = (Handle->iImgWidth + 3) * Handle->iImgHeight;
+	if (NULL != Handle)
+	{
+		if (NULL != Handle->pstImgBuff)
+		{
+			Public_Free(iGmmSeg, Handle->pstImgBuff->pucBgImg, iPixelSize);
+			Public_Free(iGmmSeg, Handle->pstImgBuff->pucFgImg, iPixelSize);
+			Public_Free(iGmmSeg, Handle->pstImgBuff->pucSnImg, iPixelSize);
+			Public_Free(iGmmSeg, Handle->pstImgBuff->pucPrevImg, iPixelSize);
+			Public_Free(iGmmSeg, Handle->pstImgBuff->pucDiffImg, iPixelSize);
+			Public_Free(iGmmSeg, Handle->pstImgBuff->pucSmoothImg, iPixelSize);
+			Public_Free(iGmmSeg, Handle->pstImgBuff->pucBoundaryImg, iPixelSize);
+			Handle->pstImgBuff->pucBgImg = NULL;
+			Handle->pstImgBuff->pucFgImg = NULL;
+			Handle->pstImgBuff->pucSnImg = NULL;
+			Handle->pstImgBuff->pucPrevImg = NULL;
+			Handle->pstImgBuff->pucDiffImg = NULL;
+			Handle->pstImgBuff->pucSmoothImg = NULL;
+			Handle->pstImgBuff->pucBoundaryImg = NULL;
+		}
+		Public_Free(iGmmSeg, Handle->pstImgBuff, sizeof(IVS_GMM_IMGBuff_S));
+		Public_Free(iGmmSeg, Handle->pstGmmInfo, sizeof(IVS_GMM_INFO_S) * iPixelSize);
+		Handle->pstImgBuff = NULL;
+		Handle->pstGmmInfo = NULL;
+
+#ifdef HAVE_TBB
+		Public_Free(iGmmSeg, Handle->pstTbbPara,  sizeof(IVS_GMM_TBB_PARA_S));
+		Handle->pstTbbPara = NULL;
+#endif
+	}
+	Public_Free(iGmmSeg, Handle, sizeof(IVS_GMM_S));
+	return Boon_ALG_OK;
+}

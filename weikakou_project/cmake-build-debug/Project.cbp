@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="Project"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;CMake Files\kfs\;CMake Files\kfs\mytest\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/home/boon/boon_liupeng/weikakou_project/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/home/boon/boon_liupeng/weikakou_project/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/home/boon/boon_liupeng/weikakou_project/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="mytest">
+				<Option output="/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/kfs/bin/mytest" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/kfs/bin"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/home/boon/boon_liupeng/weikakou_project/kfs/algorithm"/>
+					<Add directory="/home/boon/boon_liupeng/weikakou_project/kfs/mytest"/>
+					<Add directory="/usr/include/c++/4.8"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/4.8"/>
+					<Add directory="/usr/include/c++/4.8/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/4.8/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/4.8/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/kfs/mytest/Makefile&quot;  VERBOSE=1 mytest"/>
+					<CompileFile command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/kfs/mytest/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/kfs/mytest/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/kfs/mytest/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="mytest/fast">
+				<Option output="/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/kfs/bin/mytest" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/kfs/bin"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/home/boon/boon_liupeng/weikakou_project/kfs/algorithm"/>
+					<Add directory="/home/boon/boon_liupeng/weikakou_project/kfs/mytest"/>
+					<Add directory="/usr/include/c++/4.8"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/4.8"/>
+					<Add directory="/usr/include/c++/4.8/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/4.8/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/4.8/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/kfs/mytest/Makefile&quot;  VERBOSE=1 mytest/fast"/>
+					<CompileFile command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/kfs/mytest/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/kfs/mytest/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j2 -f &quot;/home/boon/boon_liupeng/weikakou_project/cmake-build-debug/kfs/mytest/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/home/boon/boon_liupeng/weikakou_project/kfs/mytest/Boon.h">
+			<Option target="mytest"/>
+		</Unit>
+		<Unit filename="/home/boon/boon_liupeng/weikakou_project/kfs/mytest/Boon_algo_type.h">
+			<Option target="mytest"/>
+		</Unit>
+		<Unit filename="/home/boon/boon_liupeng/weikakou_project/kfs/mytest/demo.cpp">
+			<Option target="mytest"/>
+		</Unit>
+		<Unit filename="/home/boon/boon_liupeng/weikakou_project/kfs/mytest/demo.h">
+			<Option target="mytest"/>
+		</Unit>
+		<Unit filename="/home/boon/boon_liupeng/weikakou_project/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+		<Unit filename="/home/boon/boon_liupeng/weikakou_project/kfs/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\kfs\"/>
+		</Unit>
+		<Unit filename="/home/boon/boon_liupeng/weikakou_project/kfs/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\kfs\"/>
+		</Unit>
+		<Unit filename="/home/boon/boon_liupeng/weikakou_project/kfs/mytest/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\kfs\mytest\"/>
+		</Unit>
+		<Unit filename="/home/boon/boon_liupeng/weikakou_project/kfs/mytest/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\kfs\mytest\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>
