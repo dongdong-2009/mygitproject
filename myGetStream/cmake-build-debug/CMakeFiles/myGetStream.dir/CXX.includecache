@@ -1,0 +1,38 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/boon/boon_liupeng/myGetStream/./include/jcsdk.h
+stdint.h
+-
+WinSock2.h
+-
+Windows.h
+-
+
+/home/boon/boon_liupeng/myGetStream/boonGetStream.cpp
+boonGetStream.h
+/home/boon/boon_liupeng/myGetStream/boonGetStream.h
+./include/jcsdk.h
+/home/boon/boon_liupeng/myGetStream/./include/jcsdk.h
+
+/home/boon/boon_liupeng/myGetStream/boonGetStream.h
+string
+-
+./include/jcsdk.h
+/home/boon/boon_liupeng/myGetStream/./include/jcsdk.h
+
+/home/boon/boon_liupeng/myGetStream/main.cpp
+iostream
+-
+stdio.h
+-
+string.h
+-
+boonGetStream.h
+/home/boon/boon_liupeng/myGetStream/boonGetStream.h
+

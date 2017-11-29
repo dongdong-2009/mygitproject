@@ -1,0 +1,64 @@
+/home/boon/boon_liupeng/clion-2017.2.2/bin/cmake/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/boon/boon_liupeng/myGetStream
+CMake Warning (dev) at CMakeLists.txt:13 (set):
+  Policy CMP0053 is not set: Simplify variable reference and escape sequence
+  evaluation.  Run "cmake --help-policy CMP0053" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  For input:
+
+    '@PROJECT_SOURCE_DIR@'
+
+  the old evaluation rules produce:
+
+    '/home/boon/boon_liupeng/myGetStream'
+
+  but the new evaluation rules produce:
+
+    '@PROJECT_SOURCE_DIR@'
+
+  Using the old result for compatibility since the policy is not set.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at CMakeLists.txt:14 (set):
+  Policy CMP0053 is not set: Simplify variable reference and escape sequence
+  evaluation.  Run "cmake --help-policy CMP0053" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  For input:
+
+    '@PROJECT_BINARY_DIR@'
+
+  the old evaluation rules produce:
+
+    '/home/boon/boon_liupeng/myGetStream/cmake-build-debug'
+
+  but the new evaluation rules produce:
+
+    '@PROJECT_BINARY_DIR@'
+
+  Using the old result for compatibility since the policy is not set.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at CMakeLists.txt:15 (set):
+  Policy CMP0053 is not set: Simplify variable reference and escape sequence
+  evaluation.  Run "cmake --help-policy CMP0053" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  For input:
+
+    '@PROJECT_BINARY_DIR@'
+
+  the old evaluation rules produce:
+
+    '/home/boon/boon_liupeng/myGetStream/cmake-build-debug'
+
+  but the new evaluation rules produce:
+
+    '@PROJECT_BINARY_DIR@'
+
+  Using the old result for compatibility since the policy is not set.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/boon/boon_liupeng/myGetStream/cmake-build-debug
