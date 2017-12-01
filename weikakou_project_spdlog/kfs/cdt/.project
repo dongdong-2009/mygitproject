@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>Project@cdt</name>
+	<comment></comment>
+	<projects>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>org.eclipse.cdt.managedbuilder.core.genmakebuilder</name>
+			<triggers>clean,full,incremental,</triggers>
+			<arguments>
+			</arguments>
+		</buildCommand>
+		<buildCommand>
+			<name>org.eclipse.cdt.managedbuilder.core.ScannerConfigBuilder</name>
+			<triggers>full,incremental,</triggers>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>org.eclipse.cdt.core.ccnature</nature>
+		<nature>org.eclipse.cdt.core.cnature</nature>
+		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
+		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
+	</natures>
+	<linkedResources>
+		<link>
+			<name>[Source directory]</name>
+			<type>2</type>
+			<location>/home/lenovo/test/algorithm</location>
+		</link>
+		<link>
+			<name>[Subprojects]</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Subprojects]/Project</name>
+			<type>2</type>
+			<location>/home/lenovo/test/algorithm</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/CMake Rules</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Object Files</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Resources</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files</name>
+			<type>2</type>
+			<locationURI>virtual:/virtual</locationURI>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_LUT.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_LUT.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_ann.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_ann.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_carcolor.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_carcolor.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_cclist.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_cclist.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_config.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_config.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_crc.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_crc.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_gabor_feature.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_gabor_feature.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_list.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_list.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_locate.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_locate.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_log.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_log.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_log_private.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_log_private.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_logo_api.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_logo_api.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_logo_private_api.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_logo_private_api.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_lookup_table.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_lookup_table.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_lpr.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_lpr.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_lpr_define.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_lpr_define.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_lpr_private.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_lpr_private.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_lpr_struct.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_lpr_struct.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_obj_detect.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_obj_detect.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_public_func.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_public_func.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_recognize.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_recognize.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_segment.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_segment.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_segment_i.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_segment_i.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_type.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_type.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_unzip_private.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_unzip_private.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_unzipmem.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_unzipmem.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_vehicle_type_judge.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_vehicle_type_judge.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_verification.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_verification.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_algo_verification_private.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_verification_private.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/Boon_logo_location.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_logo_location.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/HOGDescriptor.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/HOGDescriptor.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/cascadedetect.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/cascadedetect.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/model_HOG_Car.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/model_HOG_Car.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Header Files/model_NPD_Car.h</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/model_NPD_Car.h</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_LUT.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_LUT.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_ann.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_ann.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_carcolor.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_carcolor.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_cclist.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_cclist.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_crc.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_crc.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_gabor_feature.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_gabor_feature.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_list.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_list.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_locate.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_locate.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_log.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_log.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_logo_api.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_logo_api.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_lookup_table.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_lookup_table.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_lpr.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_lpr.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_obj_detect.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_obj_detect.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_public_func.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_public_func.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_recognize.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_recognize.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_seg_findct.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_seg_findct.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_seg_object.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_seg_object.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_seg_plate.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_seg_plate.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_unzip.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_unzip.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_vehicle_type_judge.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_vehicle_type_judge.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_algo_verification.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_algo_verification.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/Boon_logo_location.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/Boon_logo_location.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/HOGDescriptor.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/HOGDescriptor.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/cascadedetect.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/cascadedetect.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/model_HOG_Car.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/model_HOG_Car.cpp</location>
+		</link>
+		<link>
+			<name>[Targets]/[lib] alg/Source Files/model_NPD_Car.cpp</name>
+			<type>1</type>
+			<location>/home/lenovo/test/algorithm/model_NPD_Car.cpp</location>
+		</link>
+	</linkedResources>
+</projectDescription>

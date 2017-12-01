@@ -1,0 +1,1 @@
+----[2017-12-01 15:22:52 info] [thread 2436] Some log message ----

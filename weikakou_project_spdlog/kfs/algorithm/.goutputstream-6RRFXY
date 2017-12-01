@@ -1,0 +1,477 @@
+
+//#define		LOCAL_DBG_PRT_EN		//¿ØÖÆµ÷ÊÔÐÅÏ¢ŽòÓ¡Ê¹ÄÜ£¬Ö»×÷ÓÃ±ŸCÎÄŒþ
+//#define		LOCAL_TIME_PRT_EN		//¿ØÖÆÔËÐÐÊ±ŒäŽòÓ¡Ê¹ÄÜ£¬Ö»×÷ÓÃ±ŸCÎÄŒþ£¬LOCAL_DBG_PRT_ENÒªÏÈÊ¹ÄÜ
+#define ShowResult
+#include <stdlib.h>
+#include "Boon_algo.h"
+#include "ivsconfig.h"
+#include "Boon_algo_tripwire.h"
+#include "Boon_algo_tripwire_private.h"
+#include "Boon_algo_log.h"
+#include "Boon_algo_ivs_param.h"
+#include "ivs_ccl.h"
+#include <sys/time.h>
+#include "svm.h"
+#include <unistd.h>
+//#include "ivs_gmm.h"
+#ifdef ShowResult
+#include "opencv2/objdetect/objdetect.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+#include "opencv2/imgproc/imgproc_c.h"
+#include "opencv2/core/core.hpp"
+#include "opencv2/core/core_c.h"
+#endif
+#define WIDTHBYTES(bits)    (((bits) + 31) / 32 * 4)
+#define min(x,y) (x)<(y)?(x):(y)
+
+
+struct svm_node *x;
+int scale_min[768];
+int scale_max[768];
+int platey_last = 0;
+int platey = 0;
+long int count_frame = 0;
+long int cap_frame = 0;
+int max_nr_attr = 256*3 + 1;
+
+struct svm_model* model;
+
+
+
+Boon_HANDLE BoonAlgo_TRIP_Creat(BoonInt32  _iSeg, BoonChar * _pcKey)
+{
+	IVS_TRIPMTER_S* pstHandle = (IVS_TRIPMTER_S*)Public_Calloc(_iSeg,sizeof(IVS_TRIPMTER_S),8);
+	if(pstHandle == NULL)
+	{
+		BoonAlgo_LOG_AddLog(NULL, LOG_COM_BASIC, "BoonAlgo_TRIP_Creat: Handle Malloc Err.\n");
+		return NULL;
+	}
+	else
+	{
+		pstHandle->iSeg = _iSeg;
+
+		return  (Boon_HANDLE)pstHandle;
+	}
+}
+
+int str2int(char *str)
+{
+ int i=0,tmp=0;
+ while(str[i]!='\0')
+ {
+  if(str[i]>='0'&&str[i]<='9')
+   tmp=tmp*10+(str[i]-'0');
+  i++;
+ }
+ return tmp;
+}
+
+BoonInt32 BoonAlgo_TRIP_Init(Boon_HANDLE _hModule, Boon_ALG_TRIP_RULE_PARA_S *_pstURPPara,
+						  BoonInt32 _iImgW, BoonInt32 _iImgH)
+{
+	BoonInt32 i = 0;
+	BoonInt32 iSeg = 0;
+	BoonInt32 iPixelSize  = 0;
+	BoonInt32 iInitStatus = Boon_ALG_FAIL;
+	IVS_TRIPMTER_S* pstTripWire = (IVS_TRIPMTER_S*)_hModule;
+	FILE * fp;
+	//memset(pstTripWire, 0, sizeof(IVS_TRIPMTER_S));
+	BoonInt32  iPercent =10;
+
+
+	pstTripWire->iFrame	= 0;
+	pstTripWire->iLists	= 0;
+
+	iSeg = pstTripWire->iSeg;
+         pstTripWire->iMinTime = 5;
+
+	pstTripWire->iFrameSkipNum = 2;
+	pstTripWire->iFrameSkipTimer = 0;
+	if ( _pstURPPara->iFps < 6)
+	{
+		return Boon_ALG_FAIL;
+	}
+	else if (_pstURPPara->iFps <= 12)
+	{
+		pstTripWire->iFrameSkipNum = 0;	//²»ÌøÖ¡
+	}
+	else if (_pstURPPara->iFps <= 20)
+	{
+		pstTripWire->iFrameSkipNum = 1;	//Ìø1Ö¡
+	}
+	else
+	{
+		pstTripWire->iFrameSkipNum = 2;	//Ìø2Ö¡
+	}
+
+	pstTripWire->f32RatioW = 320.0f / _iImgW;
+	if (pstTripWire->f32RatioW > 1)
+	{
+		pstTripWire->f32RatioW = 1.0f;
+	}
+	pstTripWire->f32RatioH = pstTripWire->f32RatioW;
+
+	/*±£ŽæÔ­ÊŒÍŒÏñµÄŽóÐ¡*/
+	pstTripWire->iImgOriW	= _iImgW;
+	pstTripWire->iImgOriH	= _iImgH;
+	pstTripWire->iWidth	= pstTripWire->f32RatioW * _iImgW;
+	pstTripWire->iHeight	= pstTripWire->f32RatioH * _iImgH;
+	iPixelSize = (pstTripWire->iWidth + 5) * pstTripWire->iHeight;
+	/* ±³Ÿ°œšÄ£³õÊŒ»¯ */
+	pstTripWire->pstIVSGmm = (IVS_GMM_S*)Public_Malloc(iSeg, sizeof(IVS_GMM_S), 4);
+	if (NULL == pstTripWire->pstIVSGmm)
+	{
+		return Boon_ALG_MALLOC_ERR;
+	}
+
+
+	
+	iInitStatus = IVS_GMM_Init(	pstTripWire->pstIVSGmm, pstTripWire->iFrameSkipNum + 1, 
+								pstTripWire->iWidth, pstTripWire->iHeight);
+	if (Boon_ALG_OK != iInitStatus)
+	{
+		return iInitStatus;
+	}
+
+	/* žú×ÙœšÄ£³õÊŒ»¯ */
+	pstTripWire->pstIVSTrack = (IVS_TRACK_S*)Public_Malloc(iSeg, sizeof(IVS_TRACK_S), 4);
+	if (NULL == pstTripWire->pstIVSTrack)
+	{
+		return Boon_ALG_MALLOC_ERR;
+	}
+
+	iInitStatus = IVS_TRACK_Init(	pstTripWire->pstIVSTrack, 0, 0,
+									pstTripWire->iWidth, pstTripWire->iHeight);
+	if (Boon_ALG_OK != iInitStatus)
+	{
+		return iInitStatus;
+	}
+
+	/* ÉêÇëÍŒÏñÊýŸÝÄÚŽæ */
+	pstTripWire->pstImgRes = (Boon_ALG_IMAGE3_S*)Public_Malloc(iSeg, sizeof(Boon_ALG_IMAGE3_S), 4);
+	if (NULL == pstTripWire->pstImgRes)
+	{
+		return Boon_ALG_MALLOC_ERR;
+	}
+	pstTripWire->pstImgRes->iWidth  = pstTripWire->iWidth;
+	pstTripWire->pstImgRes->iHeight = pstTripWire->iHeight;
+	pstTripWire->pstImgRes->pucD1 = (BoonUint8*)Public_Malloc(iSeg, iPixelSize, 4);
+	pstTripWire->pstImgRes->pucD2 = (BoonUint8*)Public_Malloc(iSeg, iPixelSize, 4);
+	pstTripWire->pstImgRes->pucD3 = (BoonUint8*)Public_Malloc(iSeg, iPixelSize, 4);
+	if (NULL==pstTripWire->pstImgRes->pucD1 || 
+		NULL==pstTripWire->pstImgRes->pucD2 ||
+		NULL==pstTripWire->pstImgRes->pucD3   )
+	{
+		return Boon_ALG_MALLOC_ERR;
+	}
+	memset(pstTripWire->pstImgRes->pucD1, 0, iPixelSize);
+	memset(pstTripWire->pstImgRes->pucD2, 0, iPixelSize);
+	memset(pstTripWire->pstImgRes->pucD3, 0, iPixelSize);
+
+	/* ÉÏÒ»ŽÎœá¹û£šÌøÖ¡Ê¹ÓÃ£© */
+	pstTripWire->pstLastResult = (Boon_ALG_IVS_RESULT_SET_S*)Public_Malloc(iSeg, sizeof(Boon_ALG_IVS_RESULT_SET_S), 4);
+	if (NULL == pstTripWire->pstLastResult)
+	{
+		return Boon_ALG_MALLOC_ERR;
+	}
+	memset(pstTripWire->pstLastResult, 0, sizeof(Boon_ALG_IVS_RESULT_SET_S));
+
+	pstTripWire->pstURPPara = (Boon_ALG_TRIP_RULE_PARA_S*)Public_Malloc(iSeg, sizeof(Boon_ALG_TRIP_RULE_PARA_S), 4);
+	if (NULL == pstTripWire->pstURPPara)
+	{
+		BoonAlgo_LOG_AddLog(pstTripWire->hLog, LOG_ERR, "BoonAlgo_TRIP_Init: Malloc Err for pstURPPara.\n");
+		return Boon_ALG_MALLOC_ERR;
+	}
+	memcpy(pstTripWire->pstURPPara, _pstURPPara, sizeof(Boon_ALG_TRIP_RULE_PARA_S));
+
+
+	for (i = 0; i < _pstURPPara->iPointNum; i++)
+	{
+		pstTripWire->pstURPPara->astLinePts[i].x *= pstTripWire->f32RatioW;
+		pstTripWire->pstURPPara->astLinePts[i].y *= pstTripWire->f32RatioH;
+	}
+	pstTripWire->iMinTime = pstTripWire->iMinTime
+						  * _pstURPPara->iFps
+						  / (pstTripWire->iFrameSkipNum + 1);
+
+	//pstTripWire->iAlarmTimer = pstTripWire->iTimeThresh + 10;
+
+	if (pstTripWire->pstURPPara->iSizeMax == 0)
+	{
+		pstTripWire->pstURPPara->iSizeMax = _iImgW * pstTripWire->f32RatioW;
+	}
+	else
+	{
+		pstTripWire->pstURPPara->iSizeMax = _iImgW * pstTripWire->pstURPPara->iSizeMax * pstTripWire->f32RatioW/100;
+	}
+
+	pstTripWire->pstURPPara->iSizeMin = pstTripWire->pstURPPara->iSizeMin * _iImgW * pstTripWire->f32RatioW/100;
+
+
+	return Boon_ALG_OK;
+}
+BoonInt32 BoonAlgo_TRIP_Release(Boon_HANDLE _hModule)
+{
+	BoonInt32 iSeg = 0;
+	
+	IVS_TRIPMTER_S* pstTripWire = (IVS_TRIPMTER_S*)_hModule;
+	
+	if (NULL == _hModule)
+	{
+		return Boon_ALG_OK;
+	}
+	
+	iSeg = pstTripWire->iSeg;
+
+
+	if (pstTripWire->pstIVSGmm)
+	{
+		IVS_GMM_Release(pstTripWire->pstIVSGmm);
+		Public_Free(iSeg, pstTripWire->pstIVSGmm, 4);
+		pstTripWire->pstIVSGmm = NULL;
+	}
+
+	if (pstTripWire->pstIVSTrack)
+	{
+		IVS_TRACK_Release(pstTripWire->pstIVSTrack);
+		Public_Free(iSeg, pstTripWire->pstIVSTrack, 4);
+		pstTripWire->pstIVSTrack = NULL;
+	}
+	
+	if (pstTripWire->pstImgRes)
+	{
+		printf("dd 1\n");
+		Public_Free(iSeg, pstTripWire->pstImgRes->pucD1, 4);
+		Public_Free(iSeg, pstTripWire->pstImgRes->pucD2, 4);
+		Public_Free(iSeg, pstTripWire->pstImgRes->pucD3, 4);
+		pstTripWire->pstImgRes->pucD1 = NULL;
+		pstTripWire->pstImgRes->pucD2 = NULL;
+		pstTripWire->pstImgRes->pucD3 = NULL;
+		Public_Free(iSeg, pstTripWire->pstImgRes, 4);
+		pstTripWire->pstImgRes = NULL;
+	}
+
+	if (pstTripWire->pstLastResult)
+	{
+		Public_Free(iSeg, pstTripWire->pstLastResult, 4);
+		pstTripWire->pstLastResult = NULL;
+	}
+ 
+	if (pstTripWire->pstURPPara)
+	{
+		Public_Free(iSeg, pstTripWire->pstURPPara, sizeof(Boon_ALG_TRIP_RULE_PARA_S));
+		pstTripWire->pstURPPara = NULL;
+	}
+	Public_Free(iSeg, pstTripWire, sizeof(IVS_TRIPMTER_S));
+	return Boon_ALG_OK;
+}
+
+
+BoonInt32 BoonAlgo_TRIP_Process(Boon_HANDLE _hModule, Boon_ALG_IMAGE3_S* _pstImage)
+{
+
+	BoonInt32 iMoveNum  = 0;	/*ÔË¶¯Ç°Ÿ°žöÊý*/
+	BoonInt32 iTrackNum = 0;	/*žú×Ùœá¹ûžöÊý*/
+        BoonInt32 FirNum = 0;
+	  BoonInt32 FirNum1 = 0;
+	BoonInt32 SecNum = 0;
+	BoonInt32 PartNum = 0;
+	BoonInt32 num = 0;
+      
+	struct timeval tv1;
+	struct timeval tv2;
+	struct timeval tv3;
+	gettimeofday(&tv3,NULL);
+        static int ho = 0;
+	static int ho1 = 0;
+	double target_label, predict_label;
+	IVS_TRACK_RECT_S astFgRect[Boon_MAX_FGRECTNUM] = {0};
+	
+
+	IVS_TRIPMTER_S* pstTripWire = (IVS_TRIPMTER_S*)_hModule;
+	BoonUint8 *rectgray;
+	BoonUint8 *rectcolor;
+#ifdef ShowResult
+	BoonInt32 j = 0;
+	CvMat* pstFgImg = cvCreateMatHeader(pstTripWire->iHeight, pstTripWire->iWidth, CV_8UC1);
+	CvMat* pstBgImg = cvCreateMatHeader(pstTripWire->iHeight, pstTripWire->iWidth, CV_8UC1);
+#endif       
+
+	
+        BoonUint8 *gray=(BoonUint8*)malloc(_pstImage->iWidth*_pstImage->iHeight);
+	//Public_ImageInterpolation1(_pstImage->pucD1,resize,960,540,320,180);
+	
+        Public_ImageGray(_pstImage->pucD1,gray,_pstImage->iWidth,_pstImage->iHeight);
+        
+        gettimeofday(&tv1,NULL);
+	Public_ImageInterpolation(gray, pstTripWire->pstImgRes->pucD1, _pstImage->iWidth, _pstImage->iHeight, pstTripWire->iWidth, pstTripWire->iHeight);
+	gettimeofday(&tv2,NULL);
+	//printf("test time is %d ms \n",tv2.tv_sec*1000 + tv2.tv_usec/1000 - tv1.tv_sec*1000 - tv1.tv_usec/1000);		
+	
+	memset(astFgRect, 0, sizeof(IVS_TRACK_RECT_S) * Boon_MAX_FGRECTNUM);
+
+       iMoveNum = IVS_GMM_Process(pstTripWire->pstIVSGmm, pstTripWire->pstImgRes->pucD1, astFgRect,NULL, pstTripWire->iWidth, pstTripWire->iHeight);
+		
+
+     
+
+
+#ifdef ShowResult
+	cvNamedWindow("Fg Img", 0);
+	cvNamedWindow("Bg Img", 0);
+	pstFgImg->data.ptr = pstTripWire->pstIVSGmm->pstImgBuff->pucFgImg;
+       
+	pstBgImg->data.ptr = pstTripWire->pstIVSGmm->pstImgBuff->pucBgImg;
+	
+	
+	for (j=0; j<iMoveNum; j++)
+	{
+		CvPoint stStart = {astFgRect[j].left, astFgRect[j].top};
+		CvPoint stEnd	= {astFgRect[j].right, astFgRect[j].bottom};
+		cvRectangle(pstBgImg, stStart, stEnd, CV_RGB(0, 0, 0), 1, 8, 0);
+		cvRectangle(pstFgImg, stStart, stEnd, CV_RGB(0, 0, 0), 1, 8, 0);
+	}
+         int params[3];
+	 params[0] = CV_IMWRITE_JPEG_QUALITY;
+	 params[1] = 85;
+	
+	cvShowImage("Fg Img", pstFgImg);
+	cvShowImage("Bg Img", pstBgImg);
+#endif
+
+	
+	iTrackNum = IVS_TRACK_Process(pstTripWire->pstIVSTrack, astFgRect, iMoveNum);
+
+       
+	
+	IVS_GMM_PostProcess(pstTripWire->pstIVSGmm, pstTripWire->pstIVSTrack, astFgRect, 1, pstTripWire->iWidth, pstTripWire->iHeight);
+		
+        free(gray);
+	
+	//printf("track time is %d ms \n",tv2.tv_sec*1000 + tv2.tv_usec/1000 - tv1.tv_sec*1000 - tv1.tv_usec/1000);
+	//printf("ALL time is %d ms \n",tv2.tv_sec*1000 + tv2.tv_usec/1000 - tv3.tv_sec*1000 - tv3.tv_usec/1000);
+	return Boon_ALG_OK;
+}
+
+BoonInt32 BoonAlgo_TRIP_GetResults(Boon_HANDLE _hModule, Boon_ALG_IVS_RESULT_SET_S *_pstResult)
+{
+	BoonInt32 i = 0;
+	BoonInt32 j = 0;
+        static int num = 0;
+	IVS_TRIPMTER_S* pstTripWire = (IVS_TRIPMTER_S*)_hModule;
+	BoonInt32 iMinAlTime	= pstTripWire->iMinTime;
+	//BoonInt32 iThresh		= pstTripWire->iTimeThresh;
+	BoonInt32	iCount		= pstTripWire->pstIVSTrack->iLists;
+	BoonInt32 iRuleIndex	= pstTripWire->iRuleIndex;
+	
+	IVS_TRACK_TRAJECT_S* pstTrack = pstTripWire->pstIVSTrack->pstTrackRult;
+
+	Boon_ALG_TRIP_RULE_PARA_S stRulePara = *(pstTripWire->pstURPPara);
+	BoonInt32 iLimitType		= stRulePara.iTypeLimit;
+	BoonInt32 iFlag		  = (1 << (iRuleIndex + 1));
+	//BoonInt32 iHumanType		= stRulePara.iTypeHuman;
+	//BoonInt32 iVehicleType	= stRulePara.iTypeVehicle;
+
+	//pstTripWire->iAlarmTimer++;
+
+	pstTripWire->iFrame = pstTripWire->pstIVSTrack->iFrame;
+
+	memset(_pstResult, 0, sizeof(Boon_ALG_IVS_RESULT_SET_S));
+	if (pstTripWire->iFrameSkipTimer != 0)
+	{
+		memcpy(_pstResult, pstTripWire->pstLastResult, sizeof(Boon_ALG_IVS_RESULT_SET_S));
+		return Boon_ALG_OK;
+	}
+
+	DEBUG_COM_PRINT(NULL, LOG_COM_DEBUG, "		#### pstTripWire->iFrame = %d, %d\n", pstTripWire->iFrame, iCount);
+	count_frame++;
+	if(pstTripWire->iFrame > 10)
+	{
+		BoonInt32 iBoundaryPtNum = stRulePara.iPointNum;
+		BoonInt32 iFdDirection	= stRulePara.iForDir;
+		BoonInt32 iDoubled		= stRulePara.bDobDir;
+		for(i=0; i< iCount; i++)
+		{
+		
+			if(1)
+			{
+				BoonInt32 iEvtNum		= 0;	/*µ±Ç°ÊÂŒþÊý*/
+				Boon_ALG_LINE_S stLineSt,stLineEd,stLineDv;
+				BoonUint32 iMax = pstTrack[i].iTraceLen -1;
+				BoonInt32 iDirect = 0;
+				Boon_ALG_TRIP_RESULT_S *pstTgtInfo;// = &(_pstResult->astEvents[iEvtNum]);
+				
+
+				iEvtNum = _pstResult->iEventNum;
+
+				pstTgtInfo = (Boon_ALG_TRIP_RESULT_S *)(_pstResult->astResult[iEvtNum].aucBuf);
+
+				_pstResult->astResult[iEvtNum].eType = Boon_ALG_IVS_FUNC_TRIPWIRE;
+				_pstResult->astResult[iEvtNum].iZone = iRuleIndex;
+                         
+				
+			
+			
+				
+
+				
+				
+			
+				pstTgtInfo->Id	= pstTrack[i].iHisId;
+				pstTgtInfo->iTraceLen = IVSMIN(pstTrack[i].iTraceLen, Boon_ALG_IVS_MAX_TRAJECT_LEN);
+				for (j=0; j<pstTrack[i].iTraceLen; j++)
+				{
+					pstTgtInfo->astCenter[j].x = pstTrack[i].astCenter[j].x / pstTripWire->f32RatioW;
+					pstTgtInfo->astCenter[j].y = pstTrack[i].astCenter[j].y / pstTripWire->f32RatioH;
+					
+				}
+                                
+                           
+				pstTgtInfo->stRect.top    = pstTrack[i].astObjRect[0].top  / pstTripWire->f32RatioH;
+				pstTgtInfo->stRect.left   = pstTrack[i].astObjRect[0].left / pstTripWire->f32RatioW;
+				pstTgtInfo->stRect.right  = pstTrack[i].astObjRect[0].right / pstTripWire->f32RatioW;
+				pstTgtInfo->stRect.Boonttom = pstTrack[i].astObjRect[0].bottom / pstTripWire->f32RatioH;
+				//if(pstTrack[i].iTraceLen == 2 || pstTrack[i].iTraceLen == 7)
+				printf("tt is %d %d  %d\n",pstTrack[i].iTraceLen,pstTgtInfo->astCenter[pstTrack[i].iTraceLen - 1].x , pstTgtInfo->astCenter[0].x);
+				printf("yy is %d %d  %d\n",pstTrack[i].iTraceLen,pstTgtInfo->astCenter[pstTrack[i].iTraceLen - 1].y , pstTgtInfo->astCenter[0].y);
+				if( pstTgtInfo->astCenter[0].y > 440 &&   pstTgtInfo->astCenter[1].y < 440 &&     pstTgtInfo->astCenter[0].x <  680 &&  pstTgtInfo->astCenter[0].x >  280  &&  (pstTgtInfo->astCenter[pstTrack[i].iTraceLen - 1].y - pstTgtInfo->astCenter[0].y) <= 0 )
+				{
+
+					//printf("tt is %d %d  %d\n",count_frame - cap_frame,pstTgtInfo->astCenter[0].y - platey_last);
+					/*if(platey_last != 0 && ( pstTgtInfo->astCenter[0].y - platey_last ) > 100 && (count_frame - cap_frame) < 40)
+					{
+
+					}
+					else if(platey_last != 0 && ( pstTgtInfo->astCenter[0].y - platey_last ) > 1 && (count_frame - cap_frame) < 20 && ( pstTgtInfo->astCenter[0].y - platey_last ) < 30)
+					{
+
+					}
+					else if(platey_last != 0 && ( pstTgtInfo->astCenter[0].y - platey_last ) > 50 && (count_frame - cap_frame) < 20)
+					{
+
+					}
+					else
+					{*/
+					cap_frame = count_frame;
+					platey_last = pstTgtInfo->astCenter[0].y;
+					return 5;
+					//}
+				}
+				
+				_pstResult->iEventNum++;
+			}
+		}
+	}
+
+	memcpy(pstTripWire->pstLastResult, _pstResult, sizeof(Boon_ALG_IVS_RESULT_SET_S));
+
+	return Boon_ALG_OK;
+}
+BoonInt32 BoonAlgo_TRIP_GetLibInfo( Boon_ALG_TRIP_LIB_INFO_S *_pstLibInfo)
+{
+	_pstLibInfo->pcVersion = Boon_VERSION;
+	_pstLibInfo->iAuthorChannel = 3;
+	_pstLibInfo->bBetaRealse = BoonTrue;
+	return Boon_ALG_OK;
+}

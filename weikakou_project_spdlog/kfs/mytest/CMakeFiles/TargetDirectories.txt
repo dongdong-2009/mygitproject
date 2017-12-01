@@ -1,0 +1,3 @@
+/home/boon/kfs/mytest/CMakeFiles/edit_cache.dir
+/home/boon/kfs/mytest/CMakeFiles/rebuild_cache.dir
+/home/boon/kfs/mytest/CMakeFiles/mytest.dir

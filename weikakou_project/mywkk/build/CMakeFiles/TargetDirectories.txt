@@ -1,0 +1,3 @@
+/home/boon/boon_liupeng/weikakou_project/mywkk/build/CMakeFiles/rebuild_cache.dir
+/home/boon/boon_liupeng/weikakou_project/mywkk/build/CMakeFiles/edit_cache.dir
+/home/boon/boon_liupeng/weikakou_project/mywkk/build/CMakeFiles/mywkk.dir
